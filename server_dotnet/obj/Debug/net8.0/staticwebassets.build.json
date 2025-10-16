@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "waNA3chEXdeFO4reG0ZqkPYgGi5sJ5CpP2wF5tZj0oY=",
+  "Source": "Inzynierka.Server",
+  "BasePath": "_content/Inzynierka.Server",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}

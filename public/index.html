@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agents — Metrics Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Agents — Metrics Dashboard</h1>
+      <p class="muted">Live view of agents and their metric settings</p>
+    </header>
+
+    <section id="controls">
+      <label>Refresh every <input id="refreshSeconds" type="number" value="10" min="1" style="width:60px;"> s</label>
+      <button id="refreshBtn">Refresh now</button>
+    </section>
+
+    <section id="content">
+      <table id="agentsTable">
+        <thead>
+          <tr>
+            <th>agentId</th>
+            <th>serverAddress</th>
+            <th>interval (s)</th>
+            <th>cpuUsage</th>
+            <th>cpuTemperature</th>
+            <th>ramUsage</th>
+            <th>gpuUsage</th>
+            <th>gpuTemperature</th>
+            <th>diskUsage</th>
+            <th>fanSpeeds</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="status" class="muted"></div>
+    </section>
+
+    <footer>
+      <small>Simple dashboard — data read from MongoDB via /api/agents</small>
+    </footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

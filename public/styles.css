@@ -1,0 +1,13 @@
+body{font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif;background:#f6f8fb;color:#111;margin:0;padding:20px}
+.container{max-width:1100px;margin:0 auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,0.06)}
+header h1{margin:0 0 4px;font-size:20px}
+.muted{color:#666}
+#controls{margin:12px 0}
+#agentsTable{width:100%;border-collapse:collapse}
+#agentsTable th,#agentsTable td{padding:8px 10px;border-bottom:1px solid #eee;text-align:left;font-size:13px}
+#agentsTable th{background:#fafafa;color:#333}
+.val{display:inline-block;padding:2px 6px;border-radius:4px}
+.val.true{background:#e6f8ec;color:#127a2e}
+.val.false{background:#ffecec;color:#b72323}
+.val.unknown{color:#999}
+footer{margin-top:12px;color:#777}
