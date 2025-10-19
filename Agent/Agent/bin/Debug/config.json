@@ -1,0 +1,15 @@
+﻿{
+	"agentId": "001",
+	"authToken": "abc123xyz789",
+	"serverAddress": "http://localhost:5000/api/metrics",
+	"collectionIntervalSeconds": 10,
+	"metrics": {
+		"cpuUsage": true,
+		"cpuTemperature": true,
+		"ramUsage": true,
+		"gpuUsage": true,
+		"gpuTemperature": true,
+		"diskUsage": true,
+		"fanSpeeds": true
+	}
+}
