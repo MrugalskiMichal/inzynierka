@@ -45,7 +45,7 @@ namespace Agent
 
             while (true)
             {
-                Thread.Sleep(500 * config.collectionIntervalSeconds);
+                Thread.Sleep(1000 * config.collectionIntervalSeconds);
                 iteration++;
                 Console.WriteLine($"Agent ID: {config.agentId}; Iteration: {iteration}");
 

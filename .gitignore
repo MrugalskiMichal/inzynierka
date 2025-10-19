@@ -1,0 +1,8 @@
+# Ignoruj pliki i foldery Visual Studio
+.vs/
+*.user
+*.suo
+
+# Ignoruj build output
+bin/
+obj/
