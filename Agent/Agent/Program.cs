@@ -9,6 +9,9 @@ using System.Diagnostics;
 using System.Threading;
 using System.Numerics;
 using System.Collections.Specialized;
+using System.Net.Http.Json;
+using System.Net.Http;
+
 
 namespace Agent
 {
@@ -17,16 +20,16 @@ namespace Agent
         //Generalnie na razie działa to tak, że zapisuje do metrics.json i wyświetla w konsolu co 5 sekund informacje
         //metrics.json i config.json są w ../bin/Debug/
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             string configPath = "config.json";
 
             AgentConfig config = LoadConfigFromFile(configPath);
 
-            MainLoop(config);
+            await MainLoop(config);
         }
 
-        static void MainLoop(AgentConfig config)
+        static async Task MainLoop(AgentConfig config)
         {
             PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available MBytes");
@@ -59,7 +62,6 @@ namespace Agent
 
                 if (config.metrics.ramUsage)
                 {
-                    ShowRamUsage(ramCounter, totalRAM);
                     Vector2 ramData = GetRamUsage(ramCounter, totalRAM);
                     //na razie nie używamy procentowych warotści, potem może dodam
                     UsedRAM = ramData.X;
@@ -68,7 +70,6 @@ namespace Agent
 
                 if (config.metrics.diskUsage)
                 {
-                    ShowDiskUsage();
                     diskData = GetDiskData();
                 }
 
@@ -83,19 +84,22 @@ namespace Agent
                     Disks = diskData,
                 };
 
-                SaveMetricsToFile(snapshot, "metrics.json");
+                await SendMetricsToServer(snapshot);
+
             }
         }
+        /*
         static void ShowCpuUsage(PerformanceCounter cpuCounter)
         {
             float value = cpuCounter.NextValue();
             Console.WriteLine($"CPU usage: {value:F1}%");
-        }
+        }*/
 
         static float GetCPUUsage(PerformanceCounter cpuCounter)
         {
             return cpuCounter.NextValue();
         }
+        /*
         static void ShowRamUsage(PerformanceCounter ramCounter, float totalRAM)
         {
             float available = ramCounter.NextValue();
@@ -103,7 +107,7 @@ namespace Agent
             float percentUsed = (used / totalRAM) * 100;
 
             Console.WriteLine($"RAM usage: {used:F0} MB / {totalRAM:F0} MB ({percentUsed:F1}%)");
-        }
+        }*/
         static Vector2 GetRamUsage(PerformanceCounter ramCounter, float totalRAM)
         {
             float available = ramCounter.NextValue();
@@ -114,7 +118,7 @@ namespace Agent
 
             return ramData;
         }
-
+        /*
         static void ShowDiskUsage()
         {
             foreach (var drive in DriveInfo.GetDrives())
@@ -129,7 +133,7 @@ namespace Agent
                     Console.WriteLine($"{drive.Name} - {usagePercent:F2}% used");
                 }
             }
-        }        
+        }     */   
 
         static Dictionary<string, DiskUsage> GetDiskData()
         {
@@ -187,17 +191,31 @@ namespace Agent
             return config;
         }
 
-        static void SaveMetricsToFile(MetricsSnapshot metrics, string filePath)
+        static async Task SendMetricsToServer(MetricsSnapshot metrics)
         {
-            var options = new JsonSerializerOptions
+            try
             {
-                WriteIndented = true //dla czytelności
-            };
+                HttpClient client = new HttpClient();
 
-            string json = JsonSerializer.Serialize(metrics, options);
-            File.WriteAllText(filePath, json);
+                // Adres API serwera
+                string url = "https://localhost:7186/api/metrics";
 
-            Console.WriteLine($"Saved in file: {filePath}");
+                // Wyślij jako JSON
+                var response = await client.PostAsJsonAsync(url, metrics);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("Metrics sent successfully.");
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to send metrics. Status: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error while sending metrics: " + ex.Message);
+            }
         }
 
     }
