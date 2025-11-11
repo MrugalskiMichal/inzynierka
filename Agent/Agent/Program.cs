@@ -76,12 +76,12 @@ namespace Agent
 
                 var snapshot = new MetricsSnapshot
                 {
-                    AgentId = config.agentId,
-                    Timestamp = DateTime.UtcNow,
-                    CpuUsagePercent = cpuUsage,
-                    UsedRamMB = UsedRAM,
-                    TotalRamMB = totalRAM,
-                    Disks = diskData,
+                    agentId = config.agentId,
+                    timestamp = DateTime.UtcNow,
+                    cpuUsagePercent = cpuUsage,
+                    usedRamMB = UsedRAM,
+                    totalRamMB = totalRAM,
+                    disks = diskData,
                 };
 
                 await SendMetricsToServer(snapshot);
@@ -149,9 +149,9 @@ namespace Agent
 
                     diskData[drive.Name] = new DiskUsage
                     {
-                        UsedDiskMB = used,
-                        TotalDiskMB = total,
-                        UsageDiskPercent = usagePercent
+                        usedDiskMB = used,
+                        totalDiskMB = total,
+                        usageDiskPercent = usagePercent
                     };
                 }
             }

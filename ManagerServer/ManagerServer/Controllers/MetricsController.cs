@@ -1,6 +1,7 @@
 ﻿using ManagerServer.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using System.Text.Json;
 
 namespace ManagerServer.Controllers
@@ -9,22 +10,22 @@ namespace ManagerServer.Controllers
     [Route("/api/[controller]")]
     public class MetricsController : ControllerBase
     {
-        private string FilePath = "servermetrics.json";
-
         [HttpPost]
-        public IActionResult ReceiveMetrics([FromBody] MetricsSnapshot snapshot)
+        public async Task<IActionResult> ReceiveMetrics([FromBody] MetricsSnapshot snapshot)
         {
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                };
+                var client = new MongoClient("mongodb://localhost:27017");
+                //to jest nazwa bazy danych jak coś
+                var database = client.GetDatabase("timeseriesdb");
 
-                string json = JsonSerializer.Serialize(snapshot, options);
-                System.IO.File.WriteAllText(FilePath, json);
+                //wybierz/stwórz kolekcję jeśli jej nie ma
+                var collection = database.GetCollection<MetricsSnapshot>("metrics");
 
-                return Ok(new { message = "Metrics saved to file." });
+                //insert snapshot
+                await collection.InsertOneAsync(snapshot);
+
+                return Ok(new { message = "Metrics saved to MongoDB." });
             }
             catch (Exception ex)
             {
@@ -32,11 +33,5 @@ namespace ManagerServer.Controllers
             }
 
         }
-
-        /*
-        public IActionResult Index()
-        {
-            return View();
-        }*/
     }
 }

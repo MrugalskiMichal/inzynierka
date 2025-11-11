@@ -8,18 +8,18 @@ namespace Agent
 {
     public class MetricsSnapshot
     {
-        public string AgentId { get; set; }
-        public DateTime Timestamp { get; set; }
-        public float CpuUsagePercent { get; set; }
-        public float UsedRamMB { get; set; }
-        public float TotalRamMB { get; set; }
-        public Dictionary<string, DiskUsage> Disks { get; set; }
+        public string agentId { get; set; }
+        public DateTime timestamp { get; set; }
+        public float cpuUsagePercent { get; set; }
+        public float usedRamMB { get; set; }
+        public float totalRamMB { get; set; }
+        public Dictionary<string, DiskUsage> disks { get; set; }
     }
 
     public class DiskUsage
     {
-        public long UsedDiskMB { get; set; }
-        public long TotalDiskMB { get; set; }
-        public double UsageDiskPercent { get; set; }
+        public long usedDiskMB { get; set; }
+        public long totalDiskMB { get; set; }
+        public double usageDiskPercent { get; set; }
     }
 }
