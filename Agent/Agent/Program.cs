@@ -133,7 +133,7 @@ namespace Agent
                     Console.WriteLine($"{drive.Name} - {usagePercent:F2}% used");
                 }
             }
-        }     */   
+        }     */
 
         static Dictionary<string, DiskUsage> GetDiskData()
         {
