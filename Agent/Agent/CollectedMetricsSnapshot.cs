@@ -10,10 +10,10 @@ namespace Agent
     {
         public string agentId { get; set; }
         public DateTime timestamp { get; set; }
-        public float cpuUsagePercent { get; set; }
-        public float usedRamMB { get; set; }
-        public float totalRamMB { get; set; }
-        public Dictionary<string, DiskUsage> disks { get; set; }
+        public float? cpuUsagePercent { get; set; }
+        public float? usedRamMB { get; set; }
+        public float? totalRamMB { get; set; }
+        public Dictionary<string, DiskUsage>? disks { get; set; }
     }
 
     public class DiskUsage

@@ -40,11 +40,12 @@ namespace Agent
             //roboczo, bo na razie uznajemy że wszystko jest na true w configu
             int iteration = 0;
 
-            float cpuUsage = 0f;
-            float UsedRAM = 0f;
+            float? cpuUsage = null;
+            float? UsedRAM = null;
+
             float totalRAM = GetTotalMemoryInMB();
 
-            Dictionary<string, DiskUsage> diskData = null;
+            Dictionary<string, DiskUsage>? diskData = null;
 
             while (true)
             {

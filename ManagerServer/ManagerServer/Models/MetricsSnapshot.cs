@@ -12,13 +12,13 @@ namespace ManagerServer.Models
         [BsonElement("timestamp")]
         public DateTime Timestamp { get; set; }
         [BsonElement("cpuUsagePercent")]
-        public float CpuUsagePercent { get; set; }
+        public float? CpuUsagePercent { get; set; }
         [BsonElement("usedRamMB")]
-        public float UsedRamMB { get; set; }
+        public float? UsedRamMB { get; set; }
         [BsonElement("totalRamMB")]
-        public float TotalRamMB { get; set; }
+        public float? TotalRamMB { get; set; }
         [BsonElement("disks")]
-        public Dictionary<string, DiskUsage> Disks { get; set; }
+        public Dictionary<string, DiskUsage>? Disks { get; set; }
     }
 
     public class DiskUsage

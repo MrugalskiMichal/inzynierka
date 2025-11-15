@@ -6,3 +6,4 @@
 # Ignoruj build output
 bin/
 obj/
+packages/

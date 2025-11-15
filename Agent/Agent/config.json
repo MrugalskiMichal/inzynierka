@@ -9,7 +9,7 @@
     "ramUsage": true,
     "gpuUsage": true,
     "gpuTemperature": true,
-    "diskUsage": true,
+    "diskUsage": false,
     "fanSpeeds": true
   }
 }
