@@ -16,13 +16,10 @@ namespace Agent
     }
     public class MetricsConfig
     {
-		public bool cpuUsage { get; set; }
-		public bool cpuTemperature { get; set; }
-		public bool ramUsage { get; set; }
-		public bool gpuUsage { get; set; }
-		public bool gpuTemperature { get; set; }
-		public bool diskUsage { get; set; }
-		public bool fanSpeeds {  get; set; }
+		public bool collectCpuData { get; set; }
+		public bool collectRamData { get; set; }
+		public bool collectGpuData { get; set; }
+		public bool collectDiskData { get; set; }
     }
 }
 

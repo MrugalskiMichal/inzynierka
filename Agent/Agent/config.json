@@ -4,12 +4,9 @@
   "serverAddress": "http://localhost:5000/api/metrics",
   "collectionIntervalSeconds": 5,
   "metrics": {
-    "cpuUsage": true,
-    "cpuTemperature": true,
-    "ramUsage": true,
-    "gpuUsage": true,
-    "gpuTemperature": true,
-    "diskUsage": false,
-    "fanSpeeds": true
+    "collectCpuData": true,
+    "collectRamData": true,
+    "collectGpuData": true,
+    "collectDiskData": true
   }
 }

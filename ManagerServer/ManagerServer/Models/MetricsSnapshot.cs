@@ -13,14 +13,35 @@ namespace ManagerServer.Models
         public DateTime Timestamp { get; set; }
         [BsonElement("cpuUsagePercent")]
         public float? CpuUsagePercent { get; set; }
-        [BsonElement("usedRamMB")]
-        public float? UsedRamMB { get; set; }
-        [BsonElement("totalRamMB")]
-        public float? TotalRamMB { get; set; }
+
+        [BsonElement("ram")]
+        public RamData? Ram { get; set; }
+
         [BsonElement("disks")]
         public Dictionary<string, DiskUsage>? Disks { get; set; }
+        [BsonElement("gpu")]
+        public Dictionary<string, GpuData>? Gpu { get; set; }
+
     }
 
+    public class RamData
+    {
+        [BsonElement("usedRamMB")]
+        public float UsedRamMB { get; set; }
+        [BsonElement("totalRamMB")]
+        public float TotalRamMB { get; set; }
+        [BsonElement("ramUsageMB")]
+        public float RamUsageMB { get; set; }
+    }
+    public class GpuData
+    {
+        [BsonElement("gpuCoreUsage")]
+        public float? GpuCoreUsage { get; set; }
+        [BsonElement("gpuCoreTemperature")]
+        public float? GpuCoreTemperature { get; set; }
+        [BsonElement("gpuMemoryUsage")]
+        public float? GpuMemoryUsage { get; set; }
+    }
     public class DiskUsage
     {
         [BsonElement("usedDiskMB")]
