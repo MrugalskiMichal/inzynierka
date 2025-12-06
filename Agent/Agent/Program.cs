@@ -102,7 +102,7 @@ namespace Agent
                     gpu = gpuData
                 };
 
-                await SendMetricsToServer(snapshot);
+                await SendMetricsToServer(snapshot, config);
                 
             }
         }
@@ -144,7 +144,6 @@ namespace Agent
         static Dictionary<string, GpuData> GetGpuData()
         {
             Dictionary<string, GpuData>? gpuData = new Dictionary<string, GpuData>();
-
 
             var computer = new Computer
             {
@@ -237,16 +236,17 @@ namespace Agent
         }
 
         //server communication
-        static async Task SendMetricsToServer(MetricsSnapshot metrics)
+        static async Task SendMetricsToServer(MetricsSnapshot metrics, AgentConfig config)
         {
             try
             {
                 HttpClient client = new HttpClient();
+               
+                string url = config.serverAddress;
+                string token = config.authToken;
 
-                // Adres API serwera
-                string url = "https://localhost:7186/api/metrics";
-
-                // Wyślij jako JSON
+                client.DefaultRequestHeaders.Add("X-Auth-Token", token);
+               
                 var response = await client.PostAsJsonAsync(url, metrics);
 
                 if (response.IsSuccessStatusCode)

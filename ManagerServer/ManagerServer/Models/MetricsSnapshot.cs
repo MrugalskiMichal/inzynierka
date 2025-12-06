@@ -5,6 +5,8 @@ namespace ManagerServer.Models
 {
     public class MetricsSnapshot
     {
+        //Bsona używam żeby format był zgodny z formatem jsonowym który od małej zaczyna, i C# który z dużej
+
         [BsonId]
         public ObjectId Id { get; set; }
         [BsonElement("agentId")]
