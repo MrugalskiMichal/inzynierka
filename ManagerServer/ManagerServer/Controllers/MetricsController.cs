@@ -10,11 +10,18 @@ namespace ManagerServer.Controllers
     [Route("/api/[controller]")]
     public class MetricsController : ControllerBase
     {
-        private static readonly Dictionary<string, string> trustedAgents = new()
+        private readonly IMongoCollection<Agent> _agents;
+        private readonly IMongoCollection<MetricsSnapshot> _metrics;
+
+        public MetricsController()
         {
-            { "001", "abc123xyz789" },
-            { "002", "abc123xyz789" }
-        };
+            var client = new MongoClient("mongodb://localhost:27017");
+            var database = client.GetDatabase("timeseriesdb");
+
+            _agents = database.GetCollection<Agent>("agents");
+            _metrics = database.GetCollection<MetricsSnapshot>("metrics");
+        }
+
 
         // W tym kontrolerze są dwa gety,
         // jeden na całą listę agentów po agentID
@@ -29,12 +36,8 @@ namespace ManagerServer.Controllers
         {
             try
             {
-                var client = new MongoClient("mongodb://localhost:27017");
-                var database = client.GetDatabase("timeseriesdb");
-                var collection = database.GetCollection<MetricsSnapshot>("metrics");
-
                 // zapisuje w liście, bierze tylko agentId
-                var agentIdList = await collection
+                var agentIdList = await _metrics
                     .Distinct<string>("AgentId", FilterDefinition<MetricsSnapshot>.Empty)
                     .ToListAsync();
 
@@ -56,9 +59,6 @@ namespace ManagerServer.Controllers
 
             try
             {
-                var client = new MongoClient("mongodb://localhost:27017");
-                var database = client.GetDatabase("timeseriesdb");
-                var collection = database.GetCollection<MetricsSnapshot>("metrics");
 
                 // eq = m zmienna jest równa jakaś wartość 
                 // gte = większe od
@@ -69,7 +69,7 @@ namespace ManagerServer.Controllers
                     Builders<MetricsSnapshot>.Filter.Lte(m => m.Timestamp, to)
                 );
 
-                var agentMetricDetails = await collection.Find(filter).SortBy(m => m.Timestamp).ToListAsync();
+                var agentMetricDetails = await _metrics.Find(filter).SortBy(m => m.Timestamp).ToListAsync();
 
                 return Ok(agentMetricDetails);
             }
@@ -89,17 +89,15 @@ namespace ManagerServer.Controllers
                 {
                     return Unauthorized(new { message = "No authorization token." });
                 }
-                else if (!trustedAgents.TryGetValue(snapshot.AgentId, out var expectedToken) || authToken != expectedToken)
+
+                var agent = await _agents.Find(a => a.AgentId == snapshot.AgentId).FirstOrDefaultAsync(); 
+
+                if (agent == null || agent.AuthToken != authToken)
                 {
                     return Unauthorized(new { message = "Invalid token or agent ID." });
                 }
 
-
-                var client = new MongoClient("mongodb://localhost:27017");
-                var database = client.GetDatabase("timeseriesdb");
-                var collection = database.GetCollection<MetricsSnapshot>("metrics");
-
-                await collection.InsertOneAsync(snapshot);
+                await _metrics.InsertOneAsync(snapshot);
 
                 return Ok(new { message = "Metrics saved to MongoDB." });
             }
