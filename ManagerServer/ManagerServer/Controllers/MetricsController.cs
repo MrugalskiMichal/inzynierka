@@ -27,7 +27,7 @@ namespace ManagerServer.Controllers
         // jeden na całą listę agentów po agentID
         // drugi na szczegóły pojedynczego agenta od jakiejś godziny do jakiejś godziny
 
-        // Jeden kontroler Post który otrzymuje metryki, jak na razie dane do walidacji są na sztywno, wyżej
+        // Jeden kontroler Post który otrzymuje metryki
 
         // zmienne client i database będą z czasem przeniesione do konstruktora i otrzymywane z głównego pliku program.cs
 
