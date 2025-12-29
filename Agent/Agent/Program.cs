@@ -33,13 +33,15 @@ namespace Agent
         }
         static async Task MainLoop(AgentConfig config)
         {
+            Logger.Info("Initializing values...");
+
             PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 
             cpuCounter.NextValue();
             Thread.Sleep(1000);//po odpaleniu na chwilę skacze cpu do 100% albo do 0%, odczekać sekunde żeby działało
 
-            //roboczo, bo na razie uznajemy że wszystko jest na true w configu
+            //roboczo, bo na razie uznajemy że wszystko jest na true w config
             int iteration = 0;
 
             float? cpuUsage = null;
@@ -50,32 +52,33 @@ namespace Agent
             Dictionary<string, GpuData>? gpuData = null;
             Dictionary<string, DiskData>? diskData = null;
 
+            Logger.Info("Values initialized");
+
             while (true)
             {
-                Thread.Sleep(1000 * config.collectionIntervalSeconds);
+                //Thread.Sleep(1000 * config.collectionIntervalSeconds);
+
+                //starter timera
+                var startTime = DateTime.UtcNow;
+
+
                 iteration++;
                 Console.WriteLine($"Agent ID: {config.agentId}; Iteration: {iteration}");
 
                 if (config.metrics.collectCpuData)
                 {
-                    //Z procesorem musi być ten thread sleep na 1 sekundę jak jest show, bo inczej ten sam błąd co na początku
-                    //ShowCpuUsage(cpuCounter);
-                    //Thread.Sleep(1000);
                     cpuUsage = GetCPUUsage(cpuCounter);
-                    Console.WriteLine("Cpu done");
                 }
 
                 if (config.metrics.collectRamData)
                 {
                     ramData = GetRamUsage(ramCounter, totalRAM);
-                    Console.WriteLine("ram done");
                 }
 
 
                 if (config.metrics.collectDiskData)
                 {
                     diskData = GetDiskData();
-                    Console.WriteLine("disk done");
                     if (diskData?.Count == 0)
                     {
                         diskData = null;
@@ -84,7 +87,6 @@ namespace Agent
                 if (config.metrics.collectGpuData)
                 {
                     gpuData = GetGpuData();
-                    Console.WriteLine("gpu done");
 
                     if (gpuData?.Count == 0)
                     {
@@ -104,6 +106,14 @@ namespace Agent
 
                 await SendMetricsToServer(snapshot, config);
                 
+                //ile mineło
+                var elapsed = DateTime.UtcNow - startTime;
+                var delay = TimeSpan.FromSeconds(config.collectionIntervalSeconds)-elapsed;
+
+                if (delay.TotalMilliseconds > 0)
+                    Thread.Sleep(delay);
+                else
+                    Logger.Warning($"Iteration took longer ({elapsed.TotalSeconds:F2}s) than configured interval ({config.collectionIntervalSeconds}s).");
             }
         }
         static float GetCPUUsage(PerformanceCounter cpuCounter)
@@ -219,9 +229,11 @@ namespace Agent
         //json
         static AgentConfig LoadConfigFromFile(string path)
         {
+            Logger.Info("Loading configuration...");
+
             if (!File.Exists(path))
             {
-                Console.WriteLine("Configuration file not found.");
+                Logger.Error("Configuration file not found.");
                 return null;
             }
 
@@ -232,6 +244,9 @@ namespace Agent
                 PropertyNameCaseInsensitive = true //żeby przyjmowało camelCase i PascalCase
             };
             AgentConfig config = JsonSerializer.Deserialize<AgentConfig>(json, options);
+
+            Logger.Info("Configuration loaded succesfully");
+
             return config;
         }
 
@@ -251,16 +266,16 @@ namespace Agent
 
                 if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("Metrics sent successfully.");
+                    Logger.Info("Metrics sent successfully.");
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to send metrics. Status: {response.StatusCode}");
+                    Logger.Error($"Failed to send metrics. Status: {response.StatusCode}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error while sending metrics: " + ex.Message);
+                Logger.Error("Error while sending metrics: " + ex.Message);
             }
         }
 
