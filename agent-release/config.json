@@ -1,0 +1,12 @@
+﻿{
+  "agentId": "001",
+  "authToken": "abc123xyz789",
+  "serverAddress": "https://localhost:7186/api/metrics",
+  "collectionIntervalSeconds": 5,
+  "metrics": {
+    "collectCpuData": true,
+    "collectRamData": true,
+    "collectGpuData": true,
+    "collectDiskData": true
+  }
+}
