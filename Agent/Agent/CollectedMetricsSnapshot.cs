@@ -19,9 +19,9 @@ namespace Agent
     {
         public RamData(float usedRamMB, float totalRamMB)
         {
-            this.usedRamMB = usedRamMB;
-            this.totalRamMB = totalRamMB;
-            ramUsageMB = (usedRamMB/totalRamMB) * 100;
+            this.usedRamMB = MathF.Round(usedRamMB, 2);
+            this.totalRamMB = MathF.Round(totalRamMB, 2);
+            ramUsageMB = MathF.Round((usedRamMB / totalRamMB) * 100, 2);
         }
 
         public float usedRamMB { get; set; }
