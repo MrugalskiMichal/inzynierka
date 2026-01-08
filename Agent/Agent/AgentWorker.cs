@@ -1,4 +1,4 @@
-﻿using LibreHardwareMonitor.Hardware;
+﻿﻿using LibreHardwareMonitor.Hardware;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
 using System.Net.Http.Json;
@@ -9,6 +9,7 @@ namespace Agent
     public  class AgentWorker : BackgroundService
     {
         private readonly HttpClient _httpClient;
+        private Computer? _computer;
         public AgentWorker(HttpClient httpClient)
         {
             // dodawanie klienta przez Dependency Injection
@@ -19,13 +20,27 @@ namespace Agent
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             //wczytanie pliku config
-            string configPath = "config.json";
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
             AgentConfig config = LoadConfigFromFile(configPath);
+
+            if (config == null)
+            {
+                Logger.Error("Agent config loading failed. Stopping service.");
+                return;
+            }
 
             Logger.Info("Initializing values...");
 
-            PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available MBytes");
+            // otwarcie computer dla GetGpu
+            if(config.metrics.collectGpuData)
+            {
+                _computer = new Computer { IsGpuEnabled = true };
+                _computer.Open();
+                Logger.Info("LibreHardware _computer component opened");
+            }
+
+            using PerformanceCounter cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            using PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 
             cpuCounter.NextValue();
             await Task.Delay(1000, stoppingToken);// po odpaleniu na chwilę skacze cpu do 100% albo do 0%, odczekać sekunde żeby działało
@@ -95,17 +110,33 @@ namespace Agent
                 else
                     Logger.Warning($"Iteration took longer ({elapsed.TotalSeconds:F2}s) than configured interval ({config.collectionIntervalSeconds}s).");
             }
-
-            Logger.Info("Application stopped");
         }
+
+        public override Task StopAsync(CancellationToken cancellationToken)
+        {
+            Logger.Info("Stopping...");
+            try 
+            {
+                if(_computer != null)
+                {
+                    _computer.Close();
+                    Logger.Info("LibreHardware _computer component closed");
+                }
+                Logger.Info("Application stopped");
+            } 
+            catch 
+            {
+                Logger.Error("Couldn't close LibreHardware _computer, Agent.sys may be still running");
+            }
+            return base.StopAsync(cancellationToken);
+        }
+
 
         // Get Values
-
         static float GetCPUUsage(PerformanceCounter cpuCounter)
         {
-            return cpuCounter.NextValue();
+            return MathF.Round(cpuCounter.NextValue(), 2);
         }
-
         static RamData GetRamUsage(PerformanceCounter ramCounter, float totalRAM)
         {
             float available = ramCounter.NextValue();
@@ -131,23 +162,21 @@ namespace Agent
                     {
                         usedDiskMB = used,
                         totalDiskMB = total,
-                        usageDiskPercent = usagePercent
+                        usageDiskPercent = Math.Round(usagePercent, 2)
                     };
                 }
             }
             return diskData;
         }
-        static Dictionary<string, GpuData> GetGpuData()
+        private Dictionary<string, GpuData> GetGpuData()
         {
+            if (_computer == null)
+                return new Dictionary<string, GpuData>();
+
+
             Dictionary<string, GpuData>? gpuData = new Dictionary<string, GpuData>();
 
-            var computer = new Computer
-            {
-                IsGpuEnabled = true,
-            };
-            computer.Open();
-
-            foreach (IHardware hardware in computer.Hardware)
+            foreach (IHardware hardware in _computer.Hardware)
             {
                 if (hardware.HardwareType == HardwareType.GpuNvidia || hardware.HardwareType == HardwareType.GpuAmd)
                 {
@@ -176,9 +205,9 @@ namespace Agent
 
                     gpuData[hardware.Name] = new GpuData
                     {
-                        gpuCoreUsage = coreUsage,
-                        gpuCoreTemperature = coreTemperature,
-                        gpuMemoryUsage = memoryUsage
+                        gpuCoreUsage = coreUsage.HasValue ? MathF.Round(coreUsage.Value, 2) : null,
+                        gpuCoreTemperature = coreTemperature.HasValue ? MathF.Round(coreTemperature.Value, 2) : null,
+                        gpuMemoryUsage = memoryUsage.HasValue ? MathF.Round(memoryUsage.Value, 2) : null
                     };
                 }
             }
@@ -241,7 +270,7 @@ namespace Agent
 
                 if (response.IsSuccessStatusCode)
                 {
-                    Logger.Info("Metrics sent successfully.");
+                    //Logger.Info("Metrics sent successfully.");
                 }
                 else
                 {
