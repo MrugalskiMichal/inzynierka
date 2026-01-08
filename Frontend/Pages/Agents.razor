@@ -1,3 +1,4 @@
+@using SharedModels.Models
 @page "/agents"
 @inject HttpClient Http
 
@@ -13,7 +14,7 @@
 <div class="alert-form">
 
     <label>Agent ID:</label>
-    <input @bind="agentId" disabled="@isEditing" />
+    <input @bind="agentId" readonly="@isEditing" />
 
     <label>Auth token:</label>
     <input @bind="authToken" />
@@ -48,7 +49,7 @@
         <div class="mt-4">
             <label class="fw-bold">PowerShell command:</label>
             <pre style="white-space: pre-wrap; word-break: break-all; max-width: 100%;">
-@generatedCommand
+                @generatedCommand
             </pre>
         </div>
     }
@@ -98,13 +99,6 @@ else
     string messageType = ""; // success, warning, error, info
 
     List<AgentDto> agents = new();
-
-    class AgentDto
-    {
-        public string AgentId { get; set; } = "";
-        public string AuthToken { get; set; } = "";
-    }
-
     class MetricOption
     {
         public string Label { get; set; } = "";
@@ -129,7 +123,7 @@ else
 
     async Task LoadAgents()
     {
-        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agent-management");
     }
 
     string GetAlertClass(string type) =>
@@ -189,7 +183,7 @@ else
         }
 
         var agent = new AgentDto { AgentId = agentId, AuthToken = authToken };
-        await Http.PostAsJsonAsync("http://localhost:5286/api/agents", agent);
+        await Http.PostAsJsonAsync("http://localhost:5286/api/agent-management", agent);
 
         message = "Agent saved to database.";
         messageType = "success";
@@ -210,7 +204,7 @@ else
     async Task UpdateAgent()
     {
         var agent = new AgentDto { AgentId = agentId, AuthToken = authToken };
-        await Http.PutAsJsonAsync("http://localhost:5286/api/agents", agent);
+        await Http.PutAsJsonAsync("http://localhost:5286/api/agent-management", agent);
 
         isEditing = false;
         agentId = "";
@@ -234,7 +228,7 @@ else
 
     async Task DeleteAgent(string id)
     {
-        await Http.DeleteAsync($"http://localhost:5286/api/agents/{id}");
+        await Http.DeleteAsync($"http://localhost:5286/api/agent-management/{id}");
 
         message = "Agent deleted.";
         messageType = "success";
