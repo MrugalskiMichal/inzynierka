@@ -1,15 +1,27 @@
 ﻿@using SharedModels.Models
 @using System.Text.Json
 @inject HttpClient Http
-@inject IJSRuntime JS
 @page "/alerts"
 
-<h3>Create Alert Aule</h3>
+<h3>Create Alert Rule</h3>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @GetAlertClass(messageType)" role="alert">
+        @message
+    </div>
+}
 
 <div class="alert-form">
 
-    <label class="fw-bold">Agent ID:</label>
-    <input @bind="newAlert.AgentId" />
+    <label class="fw-bold">Select agent:</label>
+    <select @bind="newAlert.AgentId">
+        <option value="">-- choose agent --</option>
+        @foreach (var a in agents)
+        {
+            <option value="@a.AgentId">@a.AgentId</option>
+        }
+    </select>
 
     <label class="fw-bold">Metric type:</label>
     <select @bind="newAlert.MetricType">
@@ -83,35 +95,57 @@ else
 
 @code {
     private List<AlertRule>? alerts;
-    private AlertRule newAlert = new AlertRule
-{
-    AgentId = "001",
-    MetricType = "CPU",
-    Operator = ">",
-    Threshold = 1
-};
-
+    List<AgentDto> agents = new();
+    AlertRule newAlert = new AlertRule
+    { 
+        AgentId = "", 
+        MetricType = "", 
+        Operator = "", 
+        Threshold = 0};
+    string message = "";
+    string messageType = "";
     protected override async Task OnInitializedAsync()
     {
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
         alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
     }
+
+    string GetAlertClass(string type) =>
+        type switch
+        {
+            "success" => "alert-success",
+            "warning" => "alert-warning",
+            "error" => "alert-danger",
+            "info" => "alert-info",
+            _ => "alert-secondary"
+        };
 
     private async Task DeleteAlert(string id)
     {
         await Http.DeleteAsync($"/api/alerts/{id}");
         alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+
+        message = "Alert deleted.";
+        messageType = "success";
     }
 
     private async Task AddAlert()
     {
         if (string.IsNullOrWhiteSpace(newAlert.AgentId) ||
-    string.IsNullOrWhiteSpace(newAlert.Email) ||
-    newAlert.Threshold <= 0)
-{
-    await JS.InvokeVoidAsync("console.log", "Uzupełnij wszystkie pola.");
-    return;
-}
+            string.IsNullOrWhiteSpace(newAlert.Email) ||
+            newAlert.Threshold <= 0)
+        {
+            message = "Fill in all required fields.";
+            messageType = "warning";
+            return;
+        }
 
+        if (newAlert.MetricType == "DISK" && string.IsNullOrWhiteSpace(newAlert.DiskName))
+        {
+            message = "Disk name is required for DISK metric.";
+            messageType = "warning";
+            return;
+        }
 
         newAlert.MetricName = newAlert.MetricType switch
         {
@@ -124,26 +158,21 @@ else
             _ => ""
         };
 
-        if (newAlert.MetricType == "DISK" && string.IsNullOrWhiteSpace(newAlert.DiskName))
-        {
-            await JS.InvokeVoidAsync("console.log", "Dla typu DISK musisz podać nazwę dysku.");
-            return;
-        }
-
-        await JS.InvokeVoidAsync("console.log", JsonSerializer.Serialize(newAlert));
-
         var response = await Http.PostAsJsonAsync("api/alerts", newAlert);
 
         if (response.IsSuccessStatusCode)
         {
             alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
             newAlert = new AlertRule();
-            await JS.InvokeVoidAsync("console.log", "Alert dodany!");
+
+            message = "Alert added successfully.";
+            messageType = "success";
         }
         else
         {
             var error = await response.Content.ReadAsStringAsync();
-            await JS.InvokeVoidAsync("console.log", $"Błąd dodawania alertu: {response.StatusCode} → {error}");
+            message = $"Error adding alert: {response.StatusCode} → {error}";
+            messageType = "error";
         }
     }
 }

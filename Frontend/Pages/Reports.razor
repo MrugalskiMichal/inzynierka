@@ -4,6 +4,13 @@
 
 <h3>Create Report Rule</h3>
 
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @GetAlertClass(messageType)" role="alert">
+        @message
+    </div>
+}
+
 <div class="alert-form">
 
     <label class="fw-bold">Report name:</label>
@@ -16,11 +23,11 @@
             <div class="d-flex justify-content-between align-items-center mb-2" style="width: 250px;">
                 <label class="form-label mb-0">@a.AgentId</label>
                 <input class="form-check-input"
-                    type="checkbox"
-                    value="@a.AgentId"
-                    id="agent-@a.AgentId"
-                    style="width: 1.2rem; height: 1.2rem;"
-                    @onchange="e => ToggleAgent(a.AgentId, e)" />
+                       type="checkbox"
+                       value="@a.AgentId"
+                       id="agent-@a.AgentId"
+                       style="width: 1.2rem; height: 1.2rem;"
+                       @onchange="e => ToggleAgent(a.AgentId, e)" />
             </div>
         }
     </div>
@@ -32,16 +39,16 @@
             <div class="d-flex justify-content-between align-items-center mb-2" style="width: 250px;">
                 <label class="form-label mb-0">@m</label>
                 <input class="form-check-input"
-                    type="checkbox"
-                    value="@m"
-                    style="width: 1.2rem; height: 1.2rem;"
-                    @onchange="e => ToggleMetric(m, e)" />
+                       type="checkbox"
+                       value="@m"
+                       style="width: 1.2rem; height: 1.2rem;"
+                       @onchange="e => ToggleMetric(m, e)" />
             </div>
         }
     </div>
 
     <label class="fw-bold">Interval (hours):</label>
-    <input type="number" min="0" step="1" @bind="interval" />
+    <input type="number" min="1" step="1" @bind="interval" />
 
     <label class="fw-bold">Email:</label>
     <input @bind="email" />
@@ -101,11 +108,24 @@ else
     int interval = 1;
     string email = "";
 
+    string message = "";
+    string messageType = "";
+
     protected override async Task OnInitializedAsync()
     {
         agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
         await LoadReports();
     }
+
+    string GetAlertClass(string type) =>
+        type switch
+        {
+            "success" => "alert-success",
+            "warning" => "alert-warning",
+            "error" => "alert-danger",
+            "info" => "alert-info",
+            _ => "alert-secondary"
+        };
 
     async Task LoadReports()
     {
@@ -132,6 +152,34 @@ else
 
     async Task Create()
     {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            message = "Report name cannot be empty.";
+            messageType = "warning";
+            return;
+        }
+
+        if (selectedAgents.Count == 0)
+        {
+            message = "Select at least one agent.";
+            messageType = "warning";
+            return;
+        }
+
+        if (selectedMetrics.Count == 0)
+        {
+            message = "Select at least one metric.";
+            messageType = "warning";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            message = "Email cannot be empty.";
+            messageType = "warning";
+            return;
+        }
+
         var rule = new ReportRule
         {
             Name = name,
@@ -140,12 +188,12 @@ else
             IntervalHours = interval,
             Email = email
         };
-        if (string.IsNullOrWhiteSpace(email) || selectedAgents.Count == 0 || selectedMetrics.Count == 0)
-        {
-            return;
-        }
 
         await Http.PostAsJsonAsync("http://localhost:5286/api/reports", rule);
+
+        message = "Report rule created successfully.";
+        messageType = "success";
+
         await LoadReports();
         ClearForm();
     }
@@ -153,6 +201,10 @@ else
     async Task Delete(string id)
     {
         await Http.DeleteAsync($"http://localhost:5286/api/reports/{id}");
+
+        message = "Report rule deleted.";
+        messageType = "success";
+
         await LoadReports();
     }
 

@@ -7,3 +7,6 @@
 2026-01-08 16:59:20 [INFO] Initializing values...
 2026-01-08 16:59:22 [INFO] LibreHardware _computer component opened
 2026-01-08 16:59:24 [INFO] Values initialized
+2026-01-08 17:48:38 [INFO] Stopping...
+2026-01-08 17:48:38 [INFO] LibreHardware _computer component closed
+2026-01-08 17:48:38 [INFO] Application stopped
