@@ -10,7 +10,7 @@ namespace Agent
 {
     public static class Logger
     {
-        private static readonly string filePath = "agent.log";
+        private static readonly string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "agent.log");
         private static readonly object _lockFile = new object();
 
         public static void Info(string message)

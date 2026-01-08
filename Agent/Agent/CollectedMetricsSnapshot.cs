@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Agent
+﻿namespace Agent
 {
     public class MetricsSnapshot
     {
-        public required string agentId { get; set; }
+        public string agentId { get; set; }
         public DateTime timestamp { get; set; }
         public float? cpuUsagePercent { get; set; }
         public RamData? ram { get; set; }
@@ -19,9 +19,9 @@ namespace Agent
     {
         public RamData(float usedRamMB, float totalRamMB)
         {
-            this.usedRamMB = usedRamMB;
-            this.totalRamMB = totalRamMB;
-            ramUsageMB = (usedRamMB/totalRamMB) * 100;
+            this.usedRamMB = MathF.Round(usedRamMB, 2);
+            this.totalRamMB = MathF.Round(totalRamMB, 2);
+            ramUsageMB = MathF.Round((usedRamMB / totalRamMB) * 100, 2);
         }
 
         public float usedRamMB { get; set; }
