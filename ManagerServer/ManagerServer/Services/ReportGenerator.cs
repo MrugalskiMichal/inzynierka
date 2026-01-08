@@ -18,10 +18,10 @@ public class ReportGenerator
                     foreach (var section in data.Sections)
                     {
                         col.Item().Text(section.Title).FontSize(16).Bold();
-                        col.Item().Text($"Średnia: {section.Average:F2}");
-                        col.Item().Text($"Min: {section.Min:F2}");
-                        col.Item().Text($"Max: {section.Max:F2}");
-                        col.Item().Text($"Ostatnia wartość: {section.Last:F2}");
+                        col.Item().Text($"Mean value: {section.Average:F2}");
+                        col.Item().Text($"Minimum recorded: {section.Min:F2}");
+                        col.Item().Text($"Maximum recorded: {section.Max:F2}");
+                        col.Item().Text($"Most recent value: {section.Last:F2}");
                         col.Item().LineHorizontal(1);
                     }
                 });

@@ -122,8 +122,8 @@ public class AlertEvaluatorService
         // Wysyłka maila
         await _emailSender.SendAlertEmail(
             rule.Email,
-            $"Alert: {rule.MetricType} przekroczył próg",
-            $"Wartość: {value}, próg: {rule.Threshold}"
+            $"Alert: {rule.MetricType} exceeded the threshold",
+            $"Value: {value}, threshold: {rule.Threshold}"
         );
 
         // Aktualizacja ostatniego wywołania
