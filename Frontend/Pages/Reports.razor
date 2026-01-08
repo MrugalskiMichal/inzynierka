@@ -1,0 +1,167 @@
+@page "/reports"
+@using SharedModels.Models
+@inject HttpClient Http
+
+<h3>Create Report Rule</h3>
+
+<div class="alert-form">
+
+    <label class="fw-bold">Report name:</label>
+    <input @bind="name" />
+
+    <label class="fw-bold mt-3">Select agents:</label>
+    <div class="mt-2 d-flex flex-column align-items-start">
+        @foreach (var a in agents)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-2" style="width: 250px;">
+                <label class="form-label mb-0">@a.AgentId</label>
+                <input class="form-check-input"
+                    type="checkbox"
+                    value="@a.AgentId"
+                    id="agent-@a.AgentId"
+                    style="width: 1.2rem; height: 1.2rem;"
+                    @onchange="e => ToggleAgent(a.AgentId, e)" />
+            </div>
+        }
+    </div>
+
+    <label class="fw-bold mt-3">Select metrics:</label>
+    <div class="mt-2 d-flex flex-column align-items-start">
+        @foreach (var m in allMetrics)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-2" style="width: 250px;">
+                <label class="form-label mb-0">@m</label>
+                <input class="form-check-input"
+                    type="checkbox"
+                    value="@m"
+                    style="width: 1.2rem; height: 1.2rem;"
+                    @onchange="e => ToggleMetric(m, e)" />
+            </div>
+        }
+    </div>
+
+    <label class="fw-bold">Interval (hours):</label>
+    <input type="number" min="0" step="1" @bind="interval" />
+
+    <label class="fw-bold">Email:</label>
+    <input @bind="email" />
+
+    <button class="btn btn-primary mt-3" @onclick="Create">Create</button>
+</div>
+
+<hr />
+
+<h4>Reports list</h4>
+
+@if (reportRules == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Agents</th>
+                <th>Metrics</th>
+                <th>Email</th>
+                <th>Interval</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in reportRules)
+            {
+                <tr>
+                    <td>@r.Name</td>
+                    <td>@string.Join(", ", r.AgentIds)</td>
+                    <td>@string.Join(", ", r.Metrics)</td>
+                    <td>@r.Email</td>
+                    <td>@r.IntervalHours h</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="() => Delete(r.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    List<AgentDto> agents = new();
+    List<ReportRule> reportRules = new();
+
+    List<string> selectedAgents = new();
+    List<string> selectedMetrics = new();
+
+    string[] allMetrics = { "CPU", "RAM", "GPU", "GPU_TEMP", "GPU_MEM", "DISKS" };
+
+    string name = "";
+    int interval = 1;
+    string email = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
+        await LoadReports();
+    }
+
+    async Task LoadReports()
+    {
+        reportRules = await Http.GetFromJsonAsync<List<ReportRule>>("http://localhost:5286/api/reports");
+    }
+
+    void ToggleAgent(string id, ChangeEventArgs e)
+    {
+        bool isChecked = (bool)e.Value;
+        if (isChecked)
+            selectedAgents.Add(id);
+        else
+            selectedAgents.Remove(id);
+    }
+
+    void ToggleMetric(string metric, ChangeEventArgs e)
+    {
+        bool isChecked = (bool)e.Value;
+        if (isChecked)
+            selectedMetrics.Add(metric);
+        else
+            selectedMetrics.Remove(metric);
+    }
+
+    async Task Create()
+    {
+        var rule = new ReportRule
+        {
+            Name = name,
+            AgentIds = selectedAgents,
+            Metrics = selectedMetrics,
+            IntervalHours = interval,
+            Email = email
+        };
+        if (string.IsNullOrWhiteSpace(email) || selectedAgents.Count == 0 || selectedMetrics.Count == 0)
+        {
+            return;
+        }
+
+        await Http.PostAsJsonAsync("http://localhost:5286/api/reports", rule);
+        await LoadReports();
+        ClearForm();
+    }
+
+    async Task Delete(string id)
+    {
+        await Http.DeleteAsync($"http://localhost:5286/api/reports/{id}");
+        await LoadReports();
+    }
+
+    void ClearForm()
+    {
+        name = "";
+        interval = 1;
+        email = "";
+        selectedAgents.Clear();
+        selectedMetrics.Clear();
+    }
+}

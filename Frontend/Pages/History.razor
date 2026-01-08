@@ -1,0 +1,188 @@
+﻿@page "/history"
+@using System.Net.Http.Json
+@using System.Text.RegularExpressions
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PageTitle>History</PageTitle>
+
+<div class="mb-3 d-flex align-items-center">
+    <label for="agentSelect" class="me-2 mb-0">Select agent:</label>
+    <select id="agentSelect" name="agentSelect" class="form-select w-auto me-3" @onchange="OnAgentChanged">
+        <option value="">-- choose --</option>
+        @if (agents != null)
+        {
+            @foreach (var a in agents)
+            {
+                <option value="@a.AgentId">@a.AgentId</option>
+            }
+        }
+    </select>
+
+    <label for="rangeMinutes" class="me-2 mb-0">Range (minutes):</label>
+    <input id="rangeMinutes" name="rangeMinutes" type="number" class="form-control w-auto me-2"
+           min="1" max="1440" value="@rangeMinutes" @oninput="OnRangeChanged" />
+
+    <button class="btn btn-sm btn-outline-primary" @onclick="Refresh">Refresh</button>
+</div>
+
+<div class="row">
+    <div class="col-6" style="height:260px">
+        <canvas id="cpuTimeseries"></canvas>
+    </div>
+    <div class="col-6" style="height:260px">
+        <canvas id="ramTimeseries"></canvas>
+    </div>
+
+    <div class="col-6 mt-3" style="height:260px">
+        <canvas id="gpuTimeseries"></canvas>
+    </div>
+    <div class="col-6 mt-3" style="height:260px">
+        <canvas id="gpuTempTimeseries"></canvas>
+    </div>
+
+    <div class="col-6 mt-3" style="height:260px">
+        <canvas id="gpuMemTimeseries"></canvas>
+    </div>
+
+    <div class="col-6 mt-3" style="min-height:260px">
+        @if (_currentPerDiskSeries != null && _currentPerDiskSeries.Count > 0)
+        {
+            <div class="d-flex flex-wrap align-items-start" style="gap:12px">
+                @foreach (var key in _currentPerDiskSeries.Keys)
+                {
+                    var safe = Regex.Replace(key, "[^a-zA-Z0-9]", "_");
+                    <div style="width:340px;height:200px" class="me-2 mb-2">
+                        <canvas id=@($"disk_{safe}") style="width:100%;height:100%;display:block"></canvas>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="width:700px;height:180px">
+                <canvas id="disk_overall" style="width:100%;height:100%;display:block"></canvas>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    List<SharedModels.Models.AgentDto>? agents;
+    private string selectedAgent = string.Empty;
+    private int rangeMinutes = 60;
+
+    private Dictionary<string, double[]>? _currentPerDiskSeries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAgents();
+    }
+
+    private async Task LoadAgents()
+    {
+        agents = await Http.GetFromJsonAsync<List<SharedModels.Models.AgentDto>>("http://localhost:5286/api/agents");
+    }
+
+    private async Task OnAgentChanged(ChangeEventArgs e)
+    {
+        selectedAgent = e?.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrEmpty(selectedAgent))
+            await LoadTimeSeries();
+    }
+
+    private async Task OnRangeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e?.Value?.ToString(), out var v))
+            rangeMinutes = v;
+    }
+
+    private async Task Refresh()
+    {
+        if (!string.IsNullOrEmpty(selectedAgent))
+            await LoadTimeSeries();
+    }
+
+    private async Task LoadTimeSeries()
+    {
+        var from = DateTime.UtcNow.AddMinutes(-rangeMinutes).ToString("o");
+        var to = DateTime.UtcNow.ToString("o");
+
+        var url = $"http://localhost:5286/api/metrics/agents/{selectedAgent}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}";
+        var metrics = await Http.GetFromJsonAsync<List<MetricDto>>(url);
+
+        if (metrics == null || metrics.Count == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuTimeseries", new string[0], new float[0], "CPU", "#17a2b8");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "ramTimeseries", new string[0], new float[0], "RAM", "#f39c12");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTimeseries", new string[0], new float[0], "GPU", "#9b59b6");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempTimeseries", new string[0], new float[0], "GPU Temp", "#e74c3c");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemTimeseries", new string[0], new float[0], "GPU Mem", "#8e44ad");
+            return;
+        }
+
+        var ordered = metrics.OrderBy(m => m.Timestamp).ToList();
+
+        var labels = ordered.Select(m => m.Timestamp.ToLocalTime().ToString("HH:mm:ss")).ToArray();
+        var cpu = ordered.Select(m => m.CpuUsagePercent ?? 0f).ToArray();
+        var ram = ordered.Select(m => m.Ram?.UsedRamMB ?? 0f).ToArray();
+        var gpu = ordered.Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreUsage ?? 0f).ToArray();
+        var gpuTemp = ordered.Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreTemperature ?? 0f).ToArray();
+        var gpuMem = ordered.Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuMemoryUsage ?? 0f).ToArray();
+
+        var diskNames = new HashSet<string>();
+        foreach (var m in ordered)
+        {
+            if (m.Disks != null)
+                foreach (var k in m.Disks.Keys)
+                    diskNames.Add(k);
+        }
+
+        var perDiskSeries = new Dictionary<string, double[]>();
+        foreach (var dn in diskNames)
+        {
+            var arr = ordered.Select(m =>
+                m.Disks != null && m.Disks.TryGetValue(dn, out var d)
+                    ? d.UsageDiskPercent
+                    : 0.0
+            ).ToArray();
+
+            perDiskSeries[dn] = arr;
+        }
+
+        _currentPerDiskSeries = perDiskSeries;
+
+        float ramMax = ordered.Max(m => m.Ram?.TotalRamMB ?? 0);
+        if (ramMax <= 0) ramMax = 100;
+
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuTimeseries", labels, cpu, "CPU %", "#17a2b8", new { yMax = 100 });
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "ramTimeseries", labels, ram, "RAM MB", "#f39c12", new { yMax = ramMax });
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTimeseries", labels, gpu, "GPU %", "#9b59b6", new { yMax = 100 });
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempTimeseries", labels, gpuTemp, "GPU Temp °C", "#e74c3c", new { yMax = 100 });
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemTimeseries", labels, gpuMem, "GPU Mem %", "#8e44ad", new { yMax = 100 });
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(50);
+
+        foreach (var kv in perDiskSeries)
+        {
+            var safe = Regex.Replace(kv.Key, "[^a-zA-Z0-9]", "_");
+            var canvasId = $"disk_{safe}";
+            await JSRuntime.InvokeVoidAsync("renderLineChart", canvasId, labels, kv.Value, kv.Key, "#3498db", new { yMax = 100 });
+        }
+    }
+
+    class MetricDto
+    {
+        public string AgentId { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public float? CpuUsagePercent { get; set; }
+        public RamDto? Ram { get; set; }
+        public Dictionary<string, DiskDto>? Disks { get; set; }
+        public Dictionary<string, GpuDto>? Gpu { get; set; }
+    }
+
+    class RamDto { public float UsedRamMB { get; set; } public float TotalRamMB { get; set; } public float RamUsageMB { get; set; } }
+    class DiskDto { public long UsedDiskMB { get; set; } public long TotalDiskMB { get; set; } public double UsageDiskPercent { get; set; } }
+    class GpuDto { public float? GpuCoreUsage { get; set; } public float? GpuCoreTemperature { get; set; } public float? GpuMemoryUsage { get; set; } }
+}

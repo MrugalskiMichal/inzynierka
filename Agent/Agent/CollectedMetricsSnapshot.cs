@@ -8,7 +8,7 @@ namespace Agent
 {
     public class MetricsSnapshot
     {
-        public string agentId { get; set; }
+        public required string agentId { get; set; }
         public DateTime timestamp { get; set; }
         public float? cpuUsagePercent { get; set; }
         public RamData? ram { get; set; }

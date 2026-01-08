@@ -1,0 +1,149 @@
+﻿@using SharedModels.Models
+@using System.Text.Json
+@inject HttpClient Http
+@inject IJSRuntime JS
+@page "/alerts"
+
+<h3>Create Alert Aule</h3>
+
+<div class="alert-form">
+
+    <label class="fw-bold">Agent ID:</label>
+    <input @bind="newAlert.AgentId" />
+
+    <label class="fw-bold">Metric type:</label>
+    <select @bind="newAlert.MetricType">
+        <option value="CPU">CPU</option>
+        <option value="RAM">RAM</option>
+        <option value="DISK">Dysk</option>
+        <option value="GPU">GPU</option>
+        <option value="GPU_TEMP">GPU Temperature</option>
+        <option value="GPU_MEM">GPU Memory</option>
+    </select>
+
+    @if (newAlert.MetricType == "DISK")
+    {
+        <label class="fw-bold">Disk name:</label>
+        <input @bind="newAlert.DiskName" placeholder="np. C:\" />
+    }
+
+    <label class="fw-bold">Operator:</label>
+    <select @bind="newAlert.Operator">
+        <option value=">">&gt;</option>
+        <option value="<">&lt;</option>
+        <option value=">=">&gt;=</option>
+        <option value="<=">&lt;=</option>
+    </select>
+
+    <label class="fw-bold">Threshold:</label>
+    <input type="number" min="0" step="1" @bind="newAlert.Threshold" />
+
+    <label class="fw-bold">Email:</label>
+    <input @bind="newAlert.Email" />
+
+    <button class="btn btn-primary mt-3" @onclick="AddAlert">Add alert</button>
+</div>
+
+<hr />
+
+<h4>Alerts list</h4>
+
+@if (alerts == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Agent</th>
+                <th>Type</th>
+                <th>Threshold</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var alert in alerts)
+            {
+                <tr>
+                    <td>@alert.AgentId</td>
+                    <td>@alert.MetricType</td>
+                    <td>@alert.Operator @alert.Threshold</td>
+                    <td>@alert.Email</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteAlert(alert.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AlertRule>? alerts;
+    private AlertRule newAlert = new AlertRule
+{
+    AgentId = "001",
+    MetricType = "CPU",
+    Operator = ">",
+    Threshold = 1
+};
+
+    protected override async Task OnInitializedAsync()
+    {
+        alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+    }
+
+    private async Task DeleteAlert(string id)
+    {
+        await Http.DeleteAsync($"/api/alerts/{id}");
+        alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+    }
+
+    private async Task AddAlert()
+    {
+        if (string.IsNullOrWhiteSpace(newAlert.AgentId) ||
+    string.IsNullOrWhiteSpace(newAlert.Email) ||
+    newAlert.Threshold <= 0)
+{
+    await JS.InvokeVoidAsync("console.log", "Uzupełnij wszystkie pola.");
+    return;
+}
+
+
+        newAlert.MetricName = newAlert.MetricType switch
+        {
+            "CPU" => "cpuUsagePercent",
+            "RAM" => "ramUsageMB",
+            "DISK" => "usageDiskPercent",
+            "GPU" => "gpuCoreUsage",
+            "GPU_TEMP" => "gpuCoreTemperature",
+            "GPU_MEM" => "gpuMemoryUsage",
+            _ => ""
+        };
+
+        if (newAlert.MetricType == "DISK" && string.IsNullOrWhiteSpace(newAlert.DiskName))
+        {
+            await JS.InvokeVoidAsync("console.log", "Dla typu DISK musisz podać nazwę dysku.");
+            return;
+        }
+
+        await JS.InvokeVoidAsync("console.log", JsonSerializer.Serialize(newAlert));
+
+        var response = await Http.PostAsJsonAsync("api/alerts", newAlert);
+
+        if (response.IsSuccessStatusCode)
+        {
+            alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+            newAlert = new AlertRule();
+            await JS.InvokeVoidAsync("console.log", "Alert dodany!");
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            await JS.InvokeVoidAsync("console.log", $"Błąd dodawania alertu: {response.StatusCode} → {error}");
+        }
+    }
+}

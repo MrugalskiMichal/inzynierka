@@ -8,11 +8,11 @@ namespace Agent
 {
     public class AgentConfig
     {
-		public string agentId {  get; set; }
-		public string authToken { get; set; }
-		public string serverAddress { get; set; }
+		public required string agentId {  get; set; }
+		public required string authToken { get; set; }
+		public required string serverAddress { get; set; }
 		public int collectionIntervalSeconds { get; set; }
-		public MetricsConfig metrics { get; set; }
+		public required MetricsConfig metrics { get; set; }
     }
     public class MetricsConfig
     {

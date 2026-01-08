@@ -12,10 +12,12 @@ using System.Collections.Specialized;
 using System.Net.Http.Json;
 using System.Net.Http;
 using LibreHardwareMonitor.Hardware;
+using System.Runtime.Versioning;
 
 
 namespace Agent
 {
+    [SupportedOSPlatform("windows")]
     internal class Program
     {
         //Generalnie na razie działa to tak, że zapisuje do metrics.json i wyświetla w konsolu co 5 sekund informacje
@@ -27,7 +29,13 @@ namespace Agent
         {
             string configPath = "config.json";
 
-            AgentConfig config = LoadConfigFromFile(configPath);
+            AgentConfig? config = LoadConfigFromFile(configPath);
+
+            if (config == null)
+            {
+                Console.WriteLine("Agent configuration not found. Exiting.");
+                return;
+            }
 
             await MainLoop(config);
         }
@@ -217,22 +225,38 @@ namespace Agent
         }
 
         //json
-        static AgentConfig LoadConfigFromFile(string path)
+        static AgentConfig? LoadConfigFromFile(string path)
         {
-            if (!File.Exists(path))
+            List<string> candidates = new List<string>();
+
+            // direct path
+            candidates.Add(path);
+
+            // location relative to executable
+            string exeDir = AppContext.BaseDirectory;
+            candidates.Add(Path.Combine(exeDir, path));
+
+            // location relative to project current directory
+            candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), path));
+
+            foreach (var candidate in candidates)
             {
-                Console.WriteLine("Configuration file not found.");
-                return null;
+                if (File.Exists(candidate))
+                {
+                    Console.WriteLine($"Loading config from: {candidate}");
+                    string json = File.ReadAllText(candidate);
+
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true //żeby przyjmowało camelCase i PascalCase
+                    };
+                    AgentConfig? config = JsonSerializer.Deserialize<AgentConfig>(json, options);
+                    return config;
+                }
             }
 
-            string json = File.ReadAllText(path);
-
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true //żeby przyjmowało camelCase i PascalCase
-            };
-            AgentConfig config = JsonSerializer.Deserialize<AgentConfig>(json, options);
-            return config;
+            Console.WriteLine("Configuration file not found.");
+            return null;
         }
 
         //server communication
