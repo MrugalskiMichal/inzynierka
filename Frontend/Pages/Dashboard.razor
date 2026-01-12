@@ -1,5 +1,6 @@
 @page "/dashboard"
 @using System.Net.Http.Json
+@using ManagerServer.Models.Dto
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
@@ -124,21 +125,18 @@
     {
         try
         {
-            var agents = await Http.GetFromJsonAsync<List<SharedModels.Models.AgentDto>>(
-                "http://localhost:5286/api/agents");
-
+            var agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agents");
             if (agents == null) return;
 
             summaries = new List<AgentSummary>();
             diskNames.Clear();
 
-            // równoległe pobieranie danych
             var from = DateTime.UtcNow.AddHours(-1).ToString("o");
             var to = DateTime.UtcNow.ToString("o");
 
             var tasks = agents.Select(a =>
                 Http.GetFromJsonAsync<List<MetricDto>>(
-                    $"http://localhost:5286/api/metrics/agents/{a.AgentId}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}"
+                    $"{ApiBaseUrl}/api/metrics/agents/{a.AgentId}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}"
                 )
             );
 
@@ -188,7 +186,6 @@
                                 diskCharts[d.Key] = new List<double>();
 
                             diskCharts[d.Key].Add(d.Value.UsageDiskPercent);
-
                             summary.DiskUsage[d.Key] = d.Value.UsageDiskPercent;
                         }
                     }
@@ -206,7 +203,6 @@
                 }
             }
 
-            // render wykresów
             await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuChart", labels, cpuData, "CPU %", "#17a2b8");
             await JSRuntime.InvokeVoidAsync("renderLineChart", "ramChart", labels, ramData, "RAM MB", "#f39c12");
             await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuUsageChart", labels, gpuUsageData, "GPU %", "#9b59b6");
@@ -226,18 +222,4 @@
     }
 
     void ManualRefresh() => _ = LoadData();
-
-    class MetricDto
-    {
-        public string AgentId { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-        public float? CpuUsagePercent { get; set; }
-        public RamDto? Ram { get; set; }
-        public Dictionary<string, DiskDto>? Disks { get; set; }
-        public Dictionary<string, GpuDto>? Gpu { get; set; }
-    }
-
-    class RamDto { public float UsedRamMB { get; set; } public float TotalRamMB { get; set; } public float RamUsageMB { get; set; } }
-    class DiskDto { public long UsedDiskMB { get; set; } public long TotalDiskMB { get; set; } public double UsageDiskPercent { get; set; } }
-    class GpuDto { public float? GpuCoreUsage { get; set; } public float? GpuCoreTemperature { get; set; } public float? GpuMemoryUsage { get; set; } }
 }

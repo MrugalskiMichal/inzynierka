@@ -1,5 +1,5 @@
-@page "/reports"
-@using SharedModels.Models
+@page "/raports"
+@using ManagerServer.Models.Dto
 @inject HttpClient Http
 
 <h3>Create Report Rule</h3>
@@ -113,7 +113,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agents");
         await LoadReports();
     }
 
@@ -129,7 +129,7 @@ else
 
     async Task LoadReports()
     {
-        reportRules = await Http.GetFromJsonAsync<List<ReportRule>>("http://localhost:5286/api/reports");
+        reportRules = await Http.GetFromJsonAsync<List<ReportRule>>($"{ApiBaseUrl}/api/reports");
     }
 
     void ToggleAgent(string id, ChangeEventArgs e)
@@ -189,7 +189,7 @@ else
             Email = email
         };
 
-        await Http.PostAsJsonAsync("http://localhost:5286/api/reports", rule);
+        await Http.PostAsJsonAsync($"{ApiBaseUrl}/api/reports", rule);
 
         message = "Report rule created successfully.";
         messageType = "success";
@@ -200,7 +200,7 @@ else
 
     async Task Delete(string id)
     {
-        await Http.DeleteAsync($"http://localhost:5286/api/reports/{id}");
+        await Http.DeleteAsync($"{ApiBaseUrl}/api/reports/{id}");
 
         message = "Report rule deleted.";
         messageType = "success";

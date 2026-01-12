@@ -1,7 +1,7 @@
-﻿@using SharedModels.Models
-@using System.Text.Json
+﻿@page "/alerts"
+@using ManagerServer.Models.Dto
 @inject HttpClient Http
-@page "/alerts"
+@inject string ApiBaseUrl
 
 <h3>Create Alert Rule</h3>
 
@@ -27,7 +27,7 @@
     <select @bind="newAlert.MetricType">
         <option value="CPU">CPU</option>
         <option value="RAM">RAM</option>
-        <option value="DISK">Dysk</option>
+        <option value="DISK">Disk</option>
         <option value="GPU">GPU</option>
         <option value="GPU_TEMP">GPU Temperature</option>
         <option value="GPU_MEM">GPU Memory</option>
@@ -96,18 +96,22 @@ else
 @code {
     private List<AlertRule>? alerts;
     List<AgentDto> agents = new();
+
     AlertRule newAlert = new AlertRule
     { 
         AgentId = "", 
         MetricType = "", 
         Operator = "", 
-        Threshold = 0};
+        Threshold = 0
+    };
+
     string message = "";
     string messageType = "";
+
     protected override async Task OnInitializedAsync()
     {
-        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
-        alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agents");
+        alerts = await Http.GetFromJsonAsync<List<AlertRule>>($"{ApiBaseUrl}/api/alerts");
     }
 
     string GetAlertClass(string type) =>
@@ -122,8 +126,8 @@ else
 
     private async Task DeleteAlert(string id)
     {
-        await Http.DeleteAsync($"/api/alerts/{id}");
-        alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+        await Http.DeleteAsync($"{ApiBaseUrl}/api/alerts/{id}");
+        alerts = await Http.GetFromJsonAsync<List<AlertRule>>($"{ApiBaseUrl}/api/alerts");
 
         message = "Alert deleted.";
         messageType = "success";
@@ -158,11 +162,11 @@ else
             _ => ""
         };
 
-        var response = await Http.PostAsJsonAsync("api/alerts", newAlert);
+        var response = await Http.PostAsJsonAsync($"{ApiBaseUrl}/api/alerts", newAlert);
 
         if (response.IsSuccessStatusCode)
         {
-            alerts = await Http.GetFromJsonAsync<List<AlertRule>>("api/alerts");
+            alerts = await Http.GetFromJsonAsync<List<AlertRule>>($"{ApiBaseUrl}/api/alerts");
             newAlert = new AlertRule();
 
             message = "Alert added successfully.";
