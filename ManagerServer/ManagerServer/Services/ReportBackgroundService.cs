@@ -79,7 +79,7 @@ public class ReportBackgroundService : BackgroundService
                             "CPU" => "CPU",
                             "RAM" => "RAM",
                             "DISK" => "Disk",
-                            "GPU" => "GPU",
+                            "GPU" => "GPU Usage",
                             "GPU_TEMP" => "GPU Temperature",
                             "GPU_MEM" => "GPU Memory",
                             _ => metric

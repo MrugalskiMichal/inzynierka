@@ -12,6 +12,8 @@ window.renderLineChart = (canvasId, labels, data, label, color, options) => {
     if (window[chartKey]) {
         window[chartKey].data.labels = labels;
         window[chartKey].data.datasets[0].data = data;
+        if (options && options.yMax !== undefined) { 
+            window[chartKey].options.scales.y.max = options.yMax; }
         window[chartKey].update();
         return;
     }
