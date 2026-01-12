@@ -202,8 +202,8 @@
             await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuChart", labels, cpuData, "CPU %", "#17a2b8");
             await JSRuntime.InvokeVoidAsync("renderLineChart", "ramChart", labels, ramData, "RAM MB", "#f39c12");
             await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuUsageChart", labels, gpuUsageData, "GPU %", "#9b59b6");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempChart", labels, gpuTempData, "GPU Temp °C", "#e74c3c");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemChart", labels, gpuMemData, "GPU Mem %", "#8e44ad");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempChart", labels, gpuTempData, "GPU Temperature °C", "#e74c3c");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemChart", labels, gpuMemData, "GPU Memory %", "#8e44ad");
 
             foreach (var disk in diskCharts)
             {

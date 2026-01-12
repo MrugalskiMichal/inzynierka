@@ -106,37 +106,58 @@
 
     private async Task LoadTimeSeries()
     {
-        var from = DateTime.UtcNow.AddMinutes(-rangeMinutes).ToString("o");
-        var to = DateTime.UtcNow.ToString("o");
+        var now = DateTime.Now;
+        var from = now.AddMinutes(-rangeMinutes);
+        var to = now;
 
-        var url = $"http://localhost:5286/api/metrics/agents/{selectedAgent}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}";
+        var url = $"http://localhost:5286/api/metrics/agents/{selectedAgent}?from={Uri.EscapeDataString(from.ToString("o"))}&to={Uri.EscapeDataString(to.ToString("o"))}";
         var metrics = await Http.GetFromJsonAsync<List<MetricDto>>(url);
 
         if (metrics == null || metrics.Count == 0)
         {
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuTimeseries", new string[0], new float[0], "CPU", "#17a2b8");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "ramTimeseries", new string[0], new float[0], "RAM", "#f39c12");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTimeseries", new string[0], new float[0], "GPU", "#9b59b6");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempTimeseries", new string[0], new float[0], "GPU Temp", "#e74c3c");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemTimeseries", new string[0], new float[0], "GPU Mem", "#8e44ad");
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuTimeseries", new string[0], new float[0], "CPU %", "#17a2b8", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "ramTimeseries", new string[0], new float[0], "RAM MB", "#f39c12", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTimeseries", new string[0], new float[0], "GPU %", "#9b59b6", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempTimeseries", new string[0], new float[0], "GPU Temperature °C", "#e74c3c", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemTimeseries", new string[0], new float[0], "GPU Memory %", "#8e44ad", new { yMax = 100 });
+            _currentPerDiskSeries = new Dictionary<string, double[]>();
             return;
         }
 
         var ordered = metrics.OrderBy(m => m.Timestamp).ToList();
+        string timeFormat = rangeMinutes <= 38 ? "HH:mm:ss" : "HH:mm";
 
-        var labels = ordered.Select(m => m.Timestamp.ToLocalTime().ToString("HH:mm:ss")).ToArray();
-        var cpu = ordered.Select(m => m.CpuUsagePercent ?? 0f).ToArray();
-        var ram = ordered.Select(m => m.Ram?.UsedRamMB ?? 0f).ToArray();
-        var gpu = ordered.Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreUsage ?? 0f).ToArray();
-        var gpuTemp = ordered.Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreTemperature ?? 0f).ToArray();
-        var gpuMem = ordered.Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuMemoryUsage ?? 0f).ToArray();
+        var labels = ordered
+            .Select(m => m.Timestamp.ToLocalTime().ToString(timeFormat))
+            .ToArray();
 
+        var cpu = ordered
+            .Select(m => m.CpuUsagePercent ?? 0f)
+            .ToArray();
+
+        var ram = ordered
+            .Select(m => m.Ram?.UsedRamMB ?? 0f)
+            .ToArray();
+
+        var gpu = ordered
+            .Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreUsage ?? 0f)
+            .ToArray();
+
+        var gpuTemp = ordered
+            .Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreTemperature ?? 0f)
+            .ToArray();
+
+        var gpuMem = ordered
+            .Select(m => m.Gpu?.Values.FirstOrDefault()?.GpuMemoryUsage ?? 0f)
+            .ToArray();
         var diskNames = new HashSet<string>();
         foreach (var m in ordered)
         {
             if (m.Disks != null)
+            {
                 foreach (var k in m.Disks.Keys)
                     diskNames.Add(k);
+            }
         }
 
         var perDiskSeries = new Dictionary<string, double[]>();
@@ -159,8 +180,8 @@
         await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuTimeseries", labels, cpu, "CPU %", "#17a2b8", new { yMax = 100 });
         await JSRuntime.InvokeVoidAsync("renderLineChart", "ramTimeseries", labels, ram, "RAM MB", "#f39c12", new { yMax = ramMax });
         await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTimeseries", labels, gpu, "GPU %", "#9b59b6", new { yMax = 100 });
-        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempTimeseries", labels, gpuTemp, "GPU Temp °C", "#e74c3c", new { yMax = 100 });
-        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemTimeseries", labels, gpuMem, "GPU Mem %", "#8e44ad", new { yMax = 100 });
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempTimeseries", labels, gpuTemp, "GPU Temperature °C", "#e74c3c", new { yMax = 100 });
+        await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemTimeseries", labels, gpuMem, "GPU Memory %", "#8e44ad", new { yMax = 100 });
 
         await InvokeAsync(StateHasChanged);
         await Task.Delay(50);

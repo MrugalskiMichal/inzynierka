@@ -1,4 +1,4 @@
-﻿﻿using LibreHardwareMonitor.Hardware;
+﻿using LibreHardwareMonitor.Hardware;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
 using System.Net.Http.Json;
