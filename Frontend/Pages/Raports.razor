@@ -1,5 +1,5 @@
 @page "/raports"
-@using ManagerServer.Models.Dto
+@using Frontend.Models
 @inject HttpClient Http
 
 <h3>Create Report Rule</h3>
@@ -37,7 +37,7 @@
         @foreach (var m in allMetrics)
         {
             <div class="d-flex justify-content-between align-items-center mb-2" style="width: 250px;">
-                <label class="form-label mb-0">@m</label>
+                <label class="form-label mb-0">@FormatMetric(m)</label>
                 <input class="form-check-input"
                        type="checkbox"
                        value="@m"
@@ -83,7 +83,7 @@ else
                 <tr>
                     <td>@r.Name</td>
                     <td>@string.Join(", ", r.AgentIds)</td>
-                    <td>@string.Join(", ", r.Metrics)</td>
+                    <td>@string.Join(", ", r.Metrics.Select(m => FormatMetric(m)))</td>
                     <td>@r.Email</td>
                     <td>@r.IntervalHours h</td>
                     <td>
@@ -97,12 +97,12 @@ else
 
 @code {
     List<AgentDto> agents = new();
-    List<ReportRule> reportRules = new();
+    List<ReportRuleDto> reportRules = new();
 
     List<string> selectedAgents = new();
     List<string> selectedMetrics = new();
 
-    string[] allMetrics = { "CPU", "RAM", "GPU", "GPU_TEMP", "GPU_MEM", "DISKS" };
+    string[] allMetrics = { "CPU", "RAM", "GPU", "GPU_TEMP", "GPU_MEM", "DISK" };
 
     string name = "";
     int interval = 1;
@@ -113,7 +113,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agents");
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
         await LoadReports();
     }
 
@@ -127,9 +127,20 @@ else
             _ => "alert-secondary"
         };
 
+    string FormatMetric(string type) => 
+        type switch 
+        { 
+            "CPU" => "CPU",
+            "RAM" => "RAM", "DISK" => "Disk",
+            "GPU" => "GPU",
+            "GPU_TEMP" => "GPU Temperature",
+            "GPU_MEM" => "GPU Memory",
+            _ => type
+        };
+
     async Task LoadReports()
     {
-        reportRules = await Http.GetFromJsonAsync<List<ReportRule>>($"{ApiBaseUrl}/api/reports");
+        reportRules = await Http.GetFromJsonAsync<List<ReportRuleDto>>("http://localhost:5286/api/reports");
     }
 
     void ToggleAgent(string id, ChangeEventArgs e)
@@ -180,7 +191,7 @@ else
             return;
         }
 
-        var rule = new ReportRule
+        var rule = new ReportRuleDto
         {
             Name = name,
             AgentIds = selectedAgents,
@@ -189,7 +200,7 @@ else
             Email = email
         };
 
-        await Http.PostAsJsonAsync($"{ApiBaseUrl}/api/reports", rule);
+        await Http.PostAsJsonAsync("http://localhost:5286/api/reports", rule);
 
         message = "Report rule created successfully.";
         messageType = "success";
@@ -200,7 +211,7 @@ else
 
     async Task Delete(string id)
     {
-        await Http.DeleteAsync($"{ApiBaseUrl}/api/reports/{id}");
+        await Http.DeleteAsync($"http://localhost:5286/api/reports/{id}");
 
         message = "Report rule deleted.";
         messageType = "success";

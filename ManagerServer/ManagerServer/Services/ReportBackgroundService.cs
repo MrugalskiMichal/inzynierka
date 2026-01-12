@@ -1,4 +1,3 @@
-using SharedModels.Models;
 using ManagerServer.Models;
 using MongoDB.Driver;
 
@@ -31,6 +30,7 @@ public class ReportBackgroundService : BackgroundService
                     Console.WriteLine($"⏳ Jeszcze nie czas na raport dla {rule.Email}. Następny za {(rule.LastSent.Value.AddHours(rule.IntervalHours) - DateTime.UtcNow).TotalMinutes:F0} min.");
                     continue;
                 }
+
                 var reportData = await BuildReportData(rule, db);
                 var pdf = generator.GenerateReport(reportData);
 
@@ -53,12 +53,9 @@ public class ReportBackgroundService : BackgroundService
         {
             var since = DateTime.UtcNow.AddHours(-rule.IntervalHours);
             var snapshots = await snapshotsCollection
-                .Find(x => x.AgentId == agentId &&
-                           x.Timestamp > since)
+                .Find(x => x.AgentId == agentId && x.Timestamp > since)
                 .SortBy(x => x.Timestamp)
                 .ToListAsync();
-
-            Console.WriteLine($"📥 Agent: {agentId}, Snapshots: {snapshots.Count}");
 
             foreach (var metric in rule.Metrics)
             {
@@ -76,7 +73,18 @@ public class ReportBackgroundService : BackgroundService
 
                 data.Sections.Add(new ReportSection
                 {
-                    Title = $"{agentId} - {metric}",
+                    Title = $"{agentId} - {(
+                        metric switch
+                        {
+                            "CPU" => "CPU",
+                            "RAM" => "RAM",
+                            "DISK" => "Disk",
+                            "GPU" => "GPU",
+                            "GPU_TEMP" => "GPU Temperature",
+                            "GPU_MEM" => "GPU Memory",
+                            _ => metric
+                        }
+                    )}",
                     Average = avg,
                     Min = min,
                     Max = max,
@@ -104,7 +112,7 @@ public class ReportBackgroundService : BackgroundService
                     .Select(m => (m.Ram!.UsedRamMB / m.Ram.TotalRamMB) * 100f)
                     .ToList();
 
-            case "DISKS":
+            case "DISK":
                 return snapshots
                     .Where(m => m.Disks != null && m.Disks.Any())
                     .Select(m =>

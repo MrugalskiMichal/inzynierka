@@ -1,4 +1,4 @@
-namespace ManagerServer.Models.Dto
+namespace Frontend.Models
 {
     class MetricDto
     {

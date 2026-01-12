@@ -24,9 +24,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\SharedModels\SharedModels.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -1,64 +1,79 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using ManagerServer.Models;
+using ManagerServer.Models.Dto;
 
 namespace ManagerServer.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/agents")]
     public class AgentsController : ControllerBase
     {
         private readonly IMongoCollection<Agent> _agents;
 
         public AgentsController()
         {
-            var client = new MongoClient("mongodb://localhost:27017"); 
+            var client = new MongoClient("mongodb://localhost:27017");
             var database = client.GetDatabase("timeseriesdb");
             _agents = database.GetCollection<Agent>("agents");
         }
 
+        // GET: api/agents
         [HttpGet]
-        public async Task<IActionResult> GetAgentsToList()
+        public async Task<ActionResult<List<AgentDto>>> GetAgents()
         {
-            var agentsList = await _agents.Find(Builders<Agent>.Filter.Empty).ToListAsync();
-            return Ok(agentsList);
+            var agents = await _agents.Find(_ => true).ToListAsync();
+
+            return agents.Select(a => new AgentDto
+            {
+                AgentId = a.AgentId,
+                AuthToken = a.AuthToken
+            }).ToList();
         }
 
-
+        // POST: api/agents
         [HttpPost]
-        public async Task<IActionResult> AddAgent([FromBody] Agent agent)
+        public async Task<IActionResult> CreateAgent([FromBody] AgentDto dto)
         {
-            var exists = await _agents.Find(a => a.AgentId == agent.AgentId).FirstOrDefaultAsync();
-            if (exists != null)
-                return Conflict(new { message = "Agent with this Id already exists." });
+            var exists = await _agents.Find(a => a.AgentId == dto.AgentId).AnyAsync();
+            if (exists)
+                return Conflict("Agent with this ID already exists.");
+
+            var agent = new Agent
+            {
+                AgentId = dto.AgentId,
+                AuthToken = dto.AuthToken
+            };
 
             await _agents.InsertOneAsync(agent);
-            return Ok(agent);
+            return Ok();
         }
 
-        [HttpPut("{agentId}")]
-        public async Task<IActionResult> UpdateToken(string agentId, [FromBody]string newToken)
+        // PUT: api/agents
+        [HttpPut]
+        public async Task<IActionResult> UpdateAgent([FromBody] AgentDto dto)
         {
-            var builder = Builders<Agent>.Update.Set(u => u.AuthToken, newToken);
-            var update = await _agents.UpdateOneAsync(a => a.AgentId == agentId, builder);
+            var update = Builders<Agent>.Update
+                .Set(a => a.AuthToken, dto.AuthToken);
 
-            if(update.MatchedCount == 0)
-                return NotFound(new { message = $"Agent {agentId} not found." });
+            var result = await _agents.UpdateOneAsync(a => a.AgentId == dto.AgentId, update);
 
-            return Ok(new { message = $"Token updated for agent {agentId}." });
+            if (result.MatchedCount == 0)
+                return NotFound("Agent not found.");
+
+            return Ok();
         }
 
-        [HttpDelete("{agentId}")]
-        public async Task<IActionResult> DeleteAgent(string agentId)
+        // DELETE: api/agents/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAgent(string id)
         {
-            var delete = await _agents.DeleteOneAsync(a => a.AgentId == agentId);
+            var result = await _agents.DeleteOneAsync(a => a.AgentId == id);
 
-            if (delete.DeletedCount == 0)
-                return NotFound(new { message = $"Agent {agentId} not found." });
+            if (result.DeletedCount == 0)
+                return NotFound("Agent not found.");
 
-            return Ok(new { message = $"Agent {agentId} deleted." });
+            return Ok();
         }
-
     }
 }

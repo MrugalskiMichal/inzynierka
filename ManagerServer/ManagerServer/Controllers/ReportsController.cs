@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SharedModels.Models;
+using ManagerServer.Models;
+using ManagerServer.Models.Dto;
 
 [ApiController]
 [Route("api/reports")]
@@ -14,15 +15,36 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IEnumerable<ReportRule>> GetAll()
-        => await _rules.Find(_ => true).ToListAsync();
+    public async Task<IEnumerable<ReportRuleDto>> GetAll()
+    {
+        var list = await _rules.Find(_ => true).ToListAsync();
+
+        return list.Select(r => new ReportRuleDto
+        {
+            Id = r.Id,
+            Name = r.Name,
+            AgentIds = r.AgentIds,
+            Metrics = r.Metrics,
+            IntervalHours = r.IntervalHours,
+            Email = r.Email
+        });
+    }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] ReportRule rule)
+    public async Task<IActionResult> Create([FromBody] ReportRuleDto dto)
     {
-        rule.LastSent = null;
+        var rule = new ReportRule
+        {
+            Name = dto.Name,
+            AgentIds = dto.AgentIds,
+            Metrics = dto.Metrics,
+            IntervalHours = dto.IntervalHours,
+            Email = dto.Email,
+            LastSent = null
+        };
+
         await _rules.InsertOneAsync(rule);
-        return Ok(rule);
+        return Ok();
     }
 
     [HttpDelete("{id}")]

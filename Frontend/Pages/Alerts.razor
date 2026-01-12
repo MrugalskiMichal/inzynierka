@@ -1,7 +1,6 @@
 ﻿@page "/alerts"
-@using ManagerServer.Models.Dto
+@using Frontend.Models
 @inject HttpClient Http
-@inject string ApiBaseUrl
 
 <h3>Create Alert Rule</h3>
 
@@ -81,7 +80,7 @@ else
             {
                 <tr>
                     <td>@alert.AgentId</td>
-                    <td>@alert.MetricType</td>
+                    <td>@FormatMetric(alert.MetricType)</td>
                     <td>@alert.Operator @alert.Threshold</td>
                     <td>@alert.Email</td>
                     <td>
@@ -94,10 +93,10 @@ else
 }
 
 @code {
-    private List<AlertRule>? alerts;
+    private List<AlertRuleDto>? alerts;
     List<AgentDto> agents = new();
 
-    AlertRule newAlert = new AlertRule
+    AlertRuleDto newAlert = new AlertRuleDto
     { 
         AgentId = "", 
         MetricType = "", 
@@ -110,8 +109,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agents");
-        alerts = await Http.GetFromJsonAsync<List<AlertRule>>($"{ApiBaseUrl}/api/alerts");
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
+        alerts = await Http.GetFromJsonAsync<List<AlertRuleDto>>("http://localhost:5286/api/alerts");
     }
 
     string GetAlertClass(string type) =>
@@ -126,12 +125,24 @@ else
 
     private async Task DeleteAlert(string id)
     {
-        await Http.DeleteAsync($"{ApiBaseUrl}/api/alerts/{id}");
-        alerts = await Http.GetFromJsonAsync<List<AlertRule>>($"{ApiBaseUrl}/api/alerts");
+        await Http.DeleteAsync($"http://localhost:5286/api/alerts/{id}");
+        alerts = await Http.GetFromJsonAsync<List<AlertRuleDto>>("http://localhost:5286/api/alerts");
 
         message = "Alert deleted.";
         messageType = "success";
     }
+
+    string FormatMetric(string type) =>
+    type switch
+    {
+        "CPU" => "CPU",
+        "RAM" => "RAM",
+        "DISK" => "Disk",
+        "GPU" => "GPU",
+        "GPU_TEMP" => "GPU Temperature",
+        "GPU_MEM" => "GPU Memory",
+        _ => type
+    };
 
     private async Task AddAlert()
     {
@@ -162,12 +173,29 @@ else
             _ => ""
         };
 
-        var response = await Http.PostAsJsonAsync($"{ApiBaseUrl}/api/alerts", newAlert);
+        if (newAlert.MetricType == "DISK")
+        {
+            if (string.IsNullOrWhiteSpace(newAlert.DiskName))
+            {
+                message = "Disk name is required for DISK metric.";
+                messageType = "warning";
+                return;
+            }
+
+            if (!newAlert.DiskName.EndsWith("\\"))
+            {
+                message = "Disk name must end with '\\', e.g. 'D:\\'.";
+                messageType = "warning";
+                return;
+            }
+        }
+
+        var response = await Http.PostAsJsonAsync("http://localhost:5286/api/alerts", newAlert);
 
         if (response.IsSuccessStatusCode)
         {
-            alerts = await Http.GetFromJsonAsync<List<AlertRule>>($"{ApiBaseUrl}/api/alerts");
-            newAlert = new AlertRule();
+            alerts = await Http.GetFromJsonAsync<List<AlertRuleDto>>("http://localhost:5286/api/alerts");
+            newAlert = new AlertRuleDto();
 
             message = "Alert added successfully.";
             messageType = "success";

@@ -1,6 +1,6 @@
 @page "/dashboard"
 @using System.Net.Http.Json
-@using ManagerServer.Models.Dto
+@using Frontend.Models
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
@@ -125,7 +125,7 @@
     {
         try
         {
-            var agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agents");
+            var agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
             if (agents == null) return;
 
             summaries = new List<AgentSummary>();
@@ -135,11 +135,7 @@
             var to = DateTime.UtcNow.ToString("o");
 
             var tasks = agents.Select(a =>
-                Http.GetFromJsonAsync<List<MetricDto>>(
-                    $"{ApiBaseUrl}/api/metrics/agents/{a.AgentId}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}"
-                )
-            );
-
+                Http.GetFromJsonAsync<List<MetricDto>>($"http://localhost:5286/api/metrics/agents/{a.AgentId}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}"));
             var results = await Task.WhenAll(tasks);
 
             var labels = agents.Select(a => a.AgentId).ToList();

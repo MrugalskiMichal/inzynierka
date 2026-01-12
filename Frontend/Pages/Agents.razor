@@ -1,7 +1,6 @@
 @page "/agents"
-@using ManagerServer.Models.Dto
+@using Frontend.Models
 @inject HttpClient Http
-@inject string ApiBaseUrl
 
 <h3>Add new agent</h3>
 
@@ -108,22 +107,29 @@ else
         public bool IsSelected { get; set; } = true;
     }
 
+    public class ServerInfo
+    {
+        public string address { get; set; }
+    }
+    string serverAddress = "";
+
     List<MetricOption> allMetrics = new()
     {
         new() { Label = "CPU", Flag = "collectCpuData" },
         new() { Label = "RAM", Flag = "collectRamData" },
         new() { Label = "GPU", Flag = "collectGpuData" },
-        new() { Label = "DISKS", Flag = "collectDiskData" }
+        new() { Label = "DISK", Flag = "collectDiskData" }
     };
 
     protected override async Task OnInitializedAsync()
     {
+        var info = await Http.GetFromJsonAsync<ServerInfo>("http://localhost:5286/api/server-address"); serverAddress = info.address;
         await LoadAgents();
     }
 
     async Task LoadAgents()
     {
-        agents = await Http.GetFromJsonAsync<List<AgentDto>>($"{ApiBaseUrl}/api/agent-management");
+        agents = await Http.GetFromJsonAsync<List<AgentDto>>("http://localhost:5286/api/agents");
     }
 
     string GetAlertClass(string type) =>
@@ -153,11 +159,12 @@ else
         }
 
         var flags = allMetrics
-            .Select(m => $"-{m.Flag}:{(m.IsSelected ? 1 : 0)}")
+            .Where(m => !m.IsSelected)
+            .Select(m => $"-{m.Flag}:0")
             .ToList();
 
         generatedCommand =
-            $"powershell -ExecutionPolicy Bypass -Command \"iwr https://raw.githubusercontent.com/MrugalskiMichal/inzynierka/final-release/AgentInstall.ps1 -OutFile AgentInstall.ps1; .\\AgentInstall.ps1 -agentId '{agentId}' -authToken '{authToken}' -serverAddress '{ApiBaseUrl}/api/metrics' {string.Join(" ", flags)}\"";
+            $"powershell -ExecutionPolicy Bypass -Command \"iwr https://raw.githubusercontent.com/MrugalskiMichal/inzynierka/final-release/AgentInstall.ps1 -OutFile AgentInstall.ps1; .\\AgentInstall.ps1 -agentId '{agentId}' -authToken '{authToken}' -serverAddress '{serverAddress}/api/metrics' {string.Join(" ", flags)}\"";
 
         message = "PowerShell command generated successfully.";
         messageType = "success";
@@ -182,7 +189,7 @@ else
         }
 
         var agent = new AgentDto { AgentId = agentId, AuthToken = authToken };
-        await Http.PostAsJsonAsync($"{ApiBaseUrl}/api/agent-management", agent);
+        await Http.PostAsJsonAsync("http://localhost:5286/api/agents", agent);
 
         message = "Agent saved to database.";
         messageType = "success";
@@ -203,7 +210,7 @@ else
     async Task UpdateAgent()
     {
         var agent = new AgentDto { AgentId = agentId, AuthToken = authToken };
-        await Http.PutAsJsonAsync($"{ApiBaseUrl}/api/agent-management", agent);
+        await Http.PutAsJsonAsync("http://localhost:5286/api/agents", agent);
 
         isEditing = false;
         agentId = "";
@@ -227,7 +234,7 @@ else
 
     async Task DeleteAgent(string id)
     {
-        await Http.DeleteAsync($"{ApiBaseUrl}/api/agent-management/{id}");
+        await Http.DeleteAsync($"http://localhost:5286/api/agents/{id}");
 
         message = "Agent deleted.";
         messageType = "success";
