@@ -23,7 +23,6 @@ namespace ManagerServer.Models
         public Dictionary<string, DiskUsage>? Disks { get; set; }
         [BsonElement("gpu")]
         public Dictionary<string, GpuData>? Gpu { get; set; }
-
     }
 
     public class RamData

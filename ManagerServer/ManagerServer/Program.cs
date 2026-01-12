@@ -61,6 +61,7 @@ builder.Services.AddSingleton<EmailSender>();
 builder.Services.AddHostedService<AlertBackgroundService>();
 builder.Services.AddSingleton<ReportGenerator>();
 builder.Services.AddHostedService<ReportBackgroundService>();
+builder.Services.AddHostedService<MetricsCleanupService>();
 
 var app = builder.Build();
 
