@@ -2,7 +2,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System.ComponentModel.DataAnnotations;
 
-namespace SharedModels.Models
+namespace ManagerServer.Models
 {
     [BsonIgnoreExtraElements]
     public class ReportRule

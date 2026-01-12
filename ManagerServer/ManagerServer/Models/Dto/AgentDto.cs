@@ -1,4 +1,4 @@
-namespace SharedModels.Models
+namespace ManagerServer.Models.Dto
 {
     public class AgentDto
     {
