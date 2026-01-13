@@ -18,17 +18,11 @@ public class EmailSender
         var smtpPass = _config["Email:SmtpPass"];
         var from = _config["Email:From"];
 
-        Console.WriteLine("📬 Próba wysłania maila:");
-        Console.WriteLine($"Od: {from}");
-        Console.WriteLine($"Do: {to}");
-        Console.WriteLine($"Temat: {subject}");
-        Console.WriteLine($"Treść: {body}");
-
         var message = new MailMessage(from, to, subject, body);
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
-            EnableSsl = true,               // STARTTLS
+            EnableSsl = true,
             UseDefaultCredentials = false,
             Credentials = new NetworkCredential(smtpUser, smtpPass),
             DeliveryMethod = SmtpDeliveryMethod.Network
@@ -37,11 +31,11 @@ public class EmailSender
         try
         {
             await client.SendMailAsync(message);
-            Console.WriteLine("✅ Mail został wysłany.");
+            Console.WriteLine("Mail sent successfully");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Błąd wysyłki maila: {ex.Message}");
+            Console.WriteLine($"Error while sending: {ex.Message}");
         }
     }
     public async Task SendEmail(string to, string subject, string body, byte[]? attachment = null)
@@ -70,11 +64,11 @@ public class EmailSender
         try
         {
             await client.SendMailAsync(message);
-            Console.WriteLine("📨 Mail wysłany.");
+            Console.WriteLine("Mail sent successfully");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Błąd wysyłki maila: {ex.Message}");
+            Console.WriteLine($"Error while sending : {ex.Message}");
         }
     }
 }

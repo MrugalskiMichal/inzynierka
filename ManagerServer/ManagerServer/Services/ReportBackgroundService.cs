@@ -24,13 +24,6 @@ public class ReportBackgroundService : BackgroundService
 
             foreach (var rule in allRules)
             {
-                if (rule.LastSent != null &&
-                    DateTime.UtcNow < rule.LastSent.Value.AddHours(rule.IntervalHours))
-                {
-                    Console.WriteLine($"⏳ Jeszcze nie czas na raport dla {rule.Email}. Następny za {(rule.LastSent.Value.AddHours(rule.IntervalHours) - DateTime.UtcNow).TotalMinutes:F0} min.");
-                    continue;
-                }
-
                 var reportData = await BuildReportData(rule, db);
                 var pdf = generator.GenerateReport(reportData);
 
@@ -68,8 +61,6 @@ public class ReportBackgroundService : BackgroundService
                 float min = values.Min();
                 float max = values.Max();
                 float last = values.Last();
-
-                Console.WriteLine($"📊 Metric: {metric}, Values: {values.Count}");
 
                 data.Sections.Add(new ReportSection
                 {

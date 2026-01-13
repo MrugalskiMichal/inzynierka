@@ -20,31 +20,31 @@ public class AlertEvaluatorService
     {
         Console.WriteLine("=== START EVALUATION ===");
         var rules = await _alertRepo.GetActiveRulesAsync();
-        Console.WriteLine($"Liczba aktywnych alertów: {rules.Count}");
+        Console.WriteLine($"Number of active alerts: {rules.Count}");
 
         foreach (var rule in rules)
         {
-            var metrics = await _metricsRepo.GetMetricsForLastHour(rule.AgentId);
-
-            if (metrics == null || metrics.Count == 0)
+            if (rule.LastTriggered != null && rule.LastTriggered > DateTime.UtcNow.AddMinutes(-60))
             {
-                Console.WriteLine($"❌ No metrics for agent {rule.AgentId}");
-                continue;
+                Console.WriteLine($"Alert {rule.Id} skipped (cooldown)");
             }
-            double? avgValue = ExtractAverageMetric(rule, metrics);
-            if (avgValue == null)
-                continue;
-            Console.WriteLine($"✔ 1h average for {rule.MetricType}: {avgValue}");
-            if (CheckCondition(avgValue.Value, rule.Operator, rule.Threshold))
+            else 
             {
-                if (rule.LastTriggered != null &&
-                    rule.LastTriggered > DateTime.UtcNow.AddMinutes(-60))
+                var metrics = await _metricsRepo.GetMetricsForLastHour(rule.AgentId);
+
+                if (metrics == null || metrics.Count == 0)
                 {
-                    Console.WriteLine($"⏳ Alert {rule.MetricType} skipped (cooldown)");
+                    Console.WriteLine($"No metrics for agent {rule.AgentId}");
                     continue;
                 }
+                double? avgValue = ExtractAverageMetric(rule, metrics);
+                if (avgValue == null)
+                    continue;
 
-                await TriggerAlert(rule, avgValue.Value);
+                Console.WriteLine($"1h average for {rule.MetricType}: {avgValue}");
+
+                if (CheckCondition(avgValue.Value, rule.Operator, rule.Threshold))
+                    await TriggerAlert(rule, avgValue.Value);
             }
         }
     }
