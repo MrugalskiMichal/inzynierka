@@ -33,24 +33,14 @@ public class AlertRepository
 
     public async Task AddRuleAsync(AlertRule rule)
     {
-        Console.WriteLine("Próba zapisu alertu:");
-        Console.WriteLine($"AgentId: {rule.AgentId}");
-        Console.WriteLine($"MetricType: {rule.MetricType}");
-        Console.WriteLine($"MetricName: {rule.MetricName}");
-        Console.WriteLine($"Threshold: {rule.Threshold}");
-        Console.WriteLine($"Email: {rule.Email}");
-        Console.WriteLine($"Operator: {rule.Operator}");
-        Console.WriteLine($"DiskName: {rule.DiskName}");
-        Console.WriteLine($"Id: {rule.Id}");
-
         try
         {
             await _rules.InsertOneAsync(rule);
-            Console.WriteLine("✅ Zapisano alert w MongoDB.");
+            Console.WriteLine("Saved in MongoDB");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Błąd zapisu alertu: {ex.Message}");
+            Console.WriteLine($"Alert save error: {ex.Message}");
         }
     }
 
