@@ -44,6 +44,44 @@ window.renderLineChart = (canvasId, labels, data, label, color, options) => {
     });
 };
 
+window.renderBarChart = (canvasId, labels, data, label, color, options) => {
+    const el = document.getElementById(canvasId);
+    if (!el) return;
+
+    const ctx = el.getContext('2d');
+    const chartKey = canvasId + '_chart';
+
+    if (window[chartKey]) {
+        try { window[chartKey].destroy(); } catch {}
+        delete window[chartKey];
+    }
+
+    const yOptions = { beginAtZero: true };
+    if (options && options.yMax !== undefined) {
+        yOptions.max = options.yMax;
+    }
+
+    window[chartKey] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                backgroundColor: color + "AA",
+                borderColor: color,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: yOptions }
+        }
+    });
+};
+
+
 window.renderMultipleCharts = (containerId, seriesObject, labels, options, fallbackSeries) => {
     console.debug('renderMultipleCharts called', containerId, seriesObject, labels?.length, Object.keys(seriesObject || {}).length, options, fallbackSeries?.length);
     const container = document.getElementById(containerId);

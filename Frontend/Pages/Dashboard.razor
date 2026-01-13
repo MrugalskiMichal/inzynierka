@@ -36,7 +36,6 @@
         <div class="col-md-6 mb-3" style="height:220px">
             <canvas id="gpuMemChart"></canvas>
         </div>
-
         @foreach (var disk in diskNames)
         {
             <div class="col-md-6 mb-3" style="height:220px">
@@ -51,7 +50,7 @@
             <tr>
                 <th>Agent</th>
                 <th>CPU %</th>
-                <th>RAM MB</th>
+                <th>RAM %</th>
                 <th>GPU %</th>
                 <th>GPU Temp °C</th>
                 <th>GPU Mem %</th>
@@ -69,7 +68,7 @@
                     <tr>
                         <td>@s.AgentId</td>
                         <td>@(s.Cpu?.ToString("F1") ?? "-")</td>
-                        <td>@(s.RamUsedMB?.ToString("F0") ?? "-")</td>
+                        <td>@(s.RamUsedMB?.ToString("F1") ?? "-")</td>
                         <td>@(s.GpuUsage?.ToString("F1") ?? "-")</td>
                         <td>@(s.GpuTemp?.ToString("F1") ?? "-")</td>
                         <td>@(s.GpuMem?.ToString("F1") ?? "-")</td>
@@ -134,63 +133,86 @@
             var from = DateTime.UtcNow.AddHours(-1).ToString("o");
             var to = DateTime.UtcNow.ToString("o");
 
-            var tasks = agents.Select(a =>
-                Http.GetFromJsonAsync<List<MetricDto>>($"http://localhost:5286/api/metrics/agents/{a.AgentId}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}"));
-            var results = await Task.WhenAll(tasks);
+            // Pobieramy dane per agent
+            var tasks = agents.ToDictionary(
+                a => a.AgentId,
+                a => Http.GetFromJsonAsync<List<MetricDto>>(
+                    $"http://localhost:5286/api/metrics/agents/{a.AgentId}?from={Uri.EscapeDataString(from)}&to={Uri.EscapeDataString(to)}"
+                )
+            );
 
+            await Task.WhenAll(tasks.Values);
+
+            // Przygotowanie struktur
             var labels = agents.Select(a => a.AgentId).ToList();
             var cpuData = new List<float>();
             var ramData = new List<float>();
             var gpuUsageData = new List<float>();
             var gpuTempData = new List<float>();
             var gpuMemData = new List<float>();
+
+            var allDiskKeys = tasks.Values
+                .SelectMany(t => t.Result ?? new List<MetricDto>())
+                .Where(m => m.Disks != null)
+                .SelectMany(m => m.Disks.Keys)
+                .Distinct()
+                .ToList();
+
+            diskNames = new HashSet<string>(allDiskKeys);
             var diskCharts = new Dictionary<string, List<double>>();
 
-            for (int i = 0; i < agents.Count; i++)
+            foreach (var agent in agents)
             {
-                var a = agents[i];
-                var metrics = results[i];
+                var agentId = agent.AgentId;
+                var metrics = tasks[agentId].Result;
 
                 if (metrics != null && metrics.Count > 0)
                 {
-                    var last = metrics.OrderBy(m => m.Timestamp).Last();
-                    var gpu = last.Gpu?.Values.FirstOrDefault();
+                    var avgCpu = metrics.Average(m => m.CpuUsagePercent ?? 0);
+                    var avgRam = metrics.Average(m => m.Ram?.RamUsageMB ?? 0);
+                    var avgGpu = metrics.Average(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreUsage ?? 0);
+                    var avgGpuTemp = metrics.Average(m => m.Gpu?.Values.FirstOrDefault()?.GpuCoreTemperature ?? 0);
+                    var avgGpuMem = metrics.Average(m => m.Gpu?.Values.FirstOrDefault()?.GpuMemoryUsage ?? 0);
+
+                    cpuData.Add(avgCpu);
+                    ramData.Add(avgRam);
+                    gpuUsageData.Add(avgGpu);
+                    gpuTempData.Add(avgGpuTemp);
+                    gpuMemData.Add(avgGpuMem);
 
                     var summary = new AgentSummary
                     {
-                        AgentId = a.AgentId,
-                        Cpu = last.CpuUsagePercent,
-                        RamUsedMB = last.Ram?.UsedRamMB,
-                        GpuUsage = gpu?.GpuCoreUsage,
-                        GpuTemp = gpu?.GpuCoreTemperature,
-                        GpuMem = gpu?.GpuMemoryUsage
+                        AgentId = agentId,
+                        Cpu = avgCpu,
+                        RamUsedMB = avgRam,
+                        GpuUsage = avgGpu,
+                        GpuTemp = avgGpuTemp,
+                        GpuMem = avgGpuMem
                     };
 
-                    cpuData.Add(last.CpuUsagePercent ?? 0);
-                    ramData.Add(last.Ram?.UsedRamMB ?? 0);
-                    gpuUsageData.Add(gpu?.GpuCoreUsage ?? 0);
-                    gpuTempData.Add(gpu?.GpuCoreTemperature ?? 0);
-                    gpuMemData.Add(gpu?.GpuMemoryUsage ?? 0);
-
-                    if (last.Disks != null)
+                    foreach (var diskName in allDiskKeys)
                     {
-                        foreach (var d in last.Disks)
-                        {
-                            diskNames.Add(d.Key);
+                        var avgDisk = metrics != null && metrics.Any()
+                            ? metrics.Average(m =>
+                                m.Disks != null && m.Disks.ContainsKey(diskName)
+                                    ? m.Disks[diskName].UsageDiskPercent
+                                    : 0)
+                            : 0;
 
-                            if (!diskCharts.ContainsKey(d.Key))
-                                diskCharts[d.Key] = new List<double>();
+                        summary.DiskUsage[diskName] = avgDisk;
 
-                            diskCharts[d.Key].Add(d.Value.UsageDiskPercent);
-                            summary.DiskUsage[d.Key] = d.Value.UsageDiskPercent;
-                        }
+                        if (!diskCharts.ContainsKey(diskName))
+                            diskCharts[diskName] = new List<double>();
+
+                        diskCharts[diskName].Add(avgDisk);
                     }
-
                     summaries.Add(summary);
                 }
                 else
                 {
-                    summaries.Add(new AgentSummary { AgentId = a.AgentId });
+                    // Brak danych – tabela "-"
+                    summaries.Add(new AgentSummary { AgentId = agentId });
+                    // Wykresy dostają 0 (lub null jeśli chcesz)
                     cpuData.Add(0);
                     ramData.Add(0);
                     gpuUsageData.Add(0);
@@ -199,16 +221,19 @@
                 }
             }
 
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "cpuChart", labels, cpuData, "CPU %", "#17a2b8");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "ramChart", labels, ramData, "RAM MB", "#f39c12");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuUsageChart", labels, gpuUsageData, "GPU %", "#9b59b6");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuTempChart", labels, gpuTempData, "GPU Temperature °C", "#e74c3c");
-            await JSRuntime.InvokeVoidAsync("renderLineChart", "gpuMemChart", labels, gpuMemData, "GPU Memory %", "#8e44ad");
+            // WYKRESY GŁÓWNE
+            await JSRuntime.InvokeVoidAsync("renderBarChart", "cpuChart", labels, cpuData, "CPU %", "#17a2b8", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderBarChart", "ramChart", labels, ramData, "RAM %", "#f39c12", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderBarChart", "gpuUsageChart", labels, gpuUsageData, "GPU %", "#9b59b6", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderBarChart", "gpuTempChart", labels, gpuTempData, "GPU Temperature °C", "#e74c3c", new { yMax = 100 });
+            await JSRuntime.InvokeVoidAsync("renderBarChart", "gpuMemChart", labels, gpuMemData, "GPU Memory %", "#8e44ad", new { yMax = 100 });
 
+            // WYKRESY DYSKÓW PER AGENT
             foreach (var disk in diskCharts)
             {
-                var id = $"diskChart_{disk.Key.Replace(":", "")}";
-                await JSRuntime.InvokeVoidAsync("renderLineChart", id, labels, disk.Value, $"Disk {disk.Key}", "#3498db");
+                var diskName = disk.Key;
+                var id = $"diskChart_{diskName.Replace(":", "")}";
+                await JSRuntime.InvokeVoidAsync("renderBarChart", id, labels, disk.Value, $"Disk {diskName}", "#3498db", new { yMax = 100 });
             }
         }
         catch (Exception ex)
