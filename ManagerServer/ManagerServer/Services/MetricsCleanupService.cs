@@ -26,11 +26,11 @@ public class MetricsCleanupService : BackgroundService
 
                 var result = await collection.DeleteManyAsync(filter, cancellationToken: stoppingToken);
 
-                _logger.LogInformation($"[Cleanup] Usunięto {result.DeletedCount} starych metryk (starszych niż 7 dni).");
+                _logger.LogInformation($"[Cleanup] Deleted {result.DeletedCount} old metrics (older than 7 days).");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas czyszczenia metryk");
+                _logger.LogError(ex, "Error while clearing metrics");
             }
 
             await Task.Delay(TimeSpan.FromHours(8), stoppingToken);
