@@ -5,23 +5,23 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Add services to the container.
 
-// Replace the placeholder with your connection string.
-var uri = "mongodb://localhost:27017/";
-builder.Services.AddSingleton<IMongoClient>(sp => new MongoClient(uri));
+var mongoConnectionString = builder.Configuration["Mongo:ConnectionString"];
+var mongoDatabaseName = builder.Configuration["Mongo:Database"];
 
-builder.Services.AddSingleton(sp =>
+builder.Services.AddSingleton<IMongoClient>(sp => new MongoClient(mongoConnectionString));
+
+builder.Services.AddSingleton<IMongoDatabase>(sp =>
 {
     var client = sp.GetRequiredService<IMongoClient>();
-    return client.GetDatabase("timeseriesdb");
+    return client.GetDatabase(mongoDatabaseName);
 });
+
 try
 {
-    //w mongo database jest tym samym co w sql, ale tabele nazywaj� si� kolekcje
-    var client = new MongoClient(uri);
+    var client = new MongoClient(mongoConnectionString);
+    var db = client.GetDatabase(mongoDatabaseName);
 
-    var db = client.GetDatabase("timeseriesdb");
-
-    //tworzymy TSDB
+    // tworzymy TSDB
     var timeSeriesOptions = new TimeSeriesOptions
     (
         timeField: "timestamp",
@@ -33,7 +33,7 @@ try
         TimeSeriesOptions = timeSeriesOptions
     };
 
-    //jak nie ma stw�rz kolekcj�
+    // jak nie ma kolekcji stworz ja
     db.CreateCollection("metrics", options);
 }
 catch (MongoException me)

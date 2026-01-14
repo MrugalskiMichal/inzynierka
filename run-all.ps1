@@ -2,10 +2,10 @@
 # RUN ALL PROJECTS IN 3 TABS
 # ============================
 
-Write-Host "Starting Agent..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "dotnet run --project `"Agent\Agent\Agent.csproj`""
+#Write-Host "Starting Agent..." -ForegroundColor Yellow
+#Start-Process powershell -ArgumentList "dotnet run --project `"Agent\Agent\Agent.csproj`""
 
-Start-Sleep -Seconds 20
+#Start-Sleep -Seconds 20
 
 Write-Host "Starting ManagerServer..." -ForegroundColor Cyan
 Start-Process powershell -ArgumentList "dotnet run --project `"ManagerServer\ManagerServer\ManagerServer.csproj`""

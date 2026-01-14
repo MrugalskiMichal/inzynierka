@@ -13,13 +13,10 @@ namespace ManagerServer.Controllers
         private readonly IMongoCollection<Agent> _agents;
         private readonly IMongoCollection<MetricsSnapshot> _metrics;
 
-        public MetricsController()
+        public MetricsController(IMongoDatabase db)
         {
-            var client = new MongoClient("mongodb://localhost:27017");
-            var database = client.GetDatabase("timeseriesdb");
-
-            _agents = database.GetCollection<Agent>("agents");
-            _metrics = database.GetCollection<MetricsSnapshot>("metrics");
+            _agents = db.GetCollection<Agent>("agents");
+            _metrics = db.GetCollection<MetricsSnapshot>("metrics");
         }
 
 

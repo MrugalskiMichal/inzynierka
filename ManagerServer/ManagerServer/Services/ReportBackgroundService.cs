@@ -24,9 +24,14 @@ public class ReportBackgroundService : BackgroundService
 
             foreach (var rule in allRules)
             {
+                if (rule.LastSent != null &&
+                    DateTime.UtcNow < rule.LastSent.Value.AddHours(rule.IntervalHours))
+                {
+                    continue;
+                }
+
                 var reportData = await BuildReportData(rule, db);
                 var pdf = generator.GenerateReport(reportData);
-
                 await email.SendEmail(rule.Email, "System Report", "Attached report", pdf);
 
                 rule.LastSent = DateTime.UtcNow;

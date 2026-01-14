@@ -11,12 +11,11 @@ namespace ManagerServer.Controllers
     {
         private readonly IMongoCollection<Agent> _agents;
 
-        public AgentsController()
+        public AgentsController(IMongoDatabase db)
         {
-            var client = new MongoClient("mongodb://localhost:27017");
-            var database = client.GetDatabase("timeseriesdb");
-            _agents = database.GetCollection<Agent>("agents");
+            _agents = db.GetCollection<Agent>("agents");
         }
+
 
         // GET: api/agents
         [HttpGet]

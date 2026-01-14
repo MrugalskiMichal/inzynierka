@@ -7,11 +7,8 @@ public class AlertRepository
     private readonly IMongoCollection<AlertRule> _rules;
     private readonly IMongoCollection<AlertHistory> _history;
 
-    public AlertRepository(IConfiguration config)
+    public AlertRepository(IMongoDatabase db)
     {
-        var client = new MongoClient(config["Mongo:ConnectionString"]);
-        var db = client.GetDatabase(config["Mongo:Database"]);
-
         _rules = db.GetCollection<AlertRule>("AlertRules");
         _history = db.GetCollection<AlertHistory>("AlertHistory");
     }

@@ -5,11 +5,8 @@ public class MetricsRepository
 {
     private readonly IMongoCollection<MetricsSnapshot> _metrics;
 
-    public MetricsRepository(IConfiguration config)
+    public MetricsRepository(IMongoDatabase db)
     {
-        var client = new MongoClient(config["Mongo:ConnectionString"]);
-        var db = client.GetDatabase(config["Mongo:Database"]);
-
         _metrics = db.GetCollection<MetricsSnapshot>("metrics");
     }
 
